@@ -1,5 +1,5 @@
 const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/index-BPT0D5cr.js","assets/vendor-router-DuwlbEED.js"])))=>i.map(i=>d[i]);
-import{j as e,_ as Re}from"./index-B6NIEoik.js";import{b as Ae,r as h}from"./vendor-router-DuwlbEED.js";import{B as N}from"./Button-BQzmWOGq.js";import{C as S}from"./Card--8Q3cl7s.js";const ie=".txt,.md,.doc,.docx,text/plain,text/markdown,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document",Oe=/\.(txt|md|doc|docx)$/i,$e="script_batch_prompts",W="script_llm_fixed_keywords",H="script_llm_context_memory",me="script_projects",Me="jiangying_api_config",Fe=`请按以下流程处理剧本：
+import{j as e,_ as Re}from"./index-CE3mlRrO.js";import{b as Ae,r as h}from"./vendor-router-DuwlbEED.js";import{B as N}from"./Button-CB2UFaK0.js";import{C as S}from"./Card-_pnC6yEK.js";const ie=".txt,.md,.doc,.docx,text/plain,text/markdown,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document",Oe=/\.(txt|md|doc|docx)$/i,$e="script_batch_prompts",W="script_llm_fixed_keywords",H="script_llm_context_memory",me="script_projects",Me="jiangying_api_config",Fe=`请按以下流程处理剧本：
 
 1. 拆分剧集、分集：将剧本按场/集拆分为若干单元。
 2. 设计人物形象：提取并描述主要角色的年龄、装扮、身份、容貌、身高、身材、癖好等，便于后续场景中一致呈现。
