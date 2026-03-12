@@ -4,6 +4,7 @@ import path from 'path';
 
 /** @type {import('vite').UserConfig} */
 export default defineConfig({
+  base: '/NIUBEER/',
   plugins: [react()],
   resolve: {
     alias: {
