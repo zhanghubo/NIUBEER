@@ -1,0 +1,3016 @@
+============================================================
+软件名称：猛兽影 AI 一站式创作平台 V1.0
+源程序文档（前30页 + 后30页，每页50行）
+源代码总行数：5116 行
+============================================================
+
+【前30页（第1行 ~ 第1500行）】
+
+/* ===== 文件：src/App.jsx ===== */
+import React, { Suspense, lazy } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { MainLayout } from './components/layout/MainLayout';
+import { AuthGuard } from './components/auth/AuthGuard';
+
+/** @type {() => JSX.Element} 路由级懒加载，每个页面独立打包，按需下载 */
+const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
+const ImageGeneratePage = lazy(() => import('./pages/ImageGeneratePage').then(m => ({ default: m.ImageGeneratePage })));
+const VideoGeneratePage = lazy(() => import('./pages/VideoGeneratePage').then(m => ({ default: m.VideoGeneratePage })));
+const DigitalHumanPage = lazy(() => import('./pages/DigitalHumanPage').then(m => ({ default: m.DigitalHumanPage })));
+const ScriptLLMPage = lazy(() => import('./pages/ScriptLLMPage').then(m => ({ default: m.ScriptLLMPage })));
+const ApiPage = lazy(() => import('./pages/ApiPage').then(m => ({ default: m.ApiPage })));
+const DeveloperLandingPage = lazy(() => import('./pages/DeveloperLandingPage').then(m => ({ default: m.DeveloperLandingPage })));
+
+/**
+ * 页面加载过渡动画
+ * @returns {JSX.Element}
+ */
+function PageLoader() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+        <span className="text-sm text-zinc-500">加载中…</span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 应用根组件，配置全局路由（懒加载 + Suspense）
+ * 启动页 / -> 登录页 /login -> 需登录的首页及功能页
+ * @returns {JSX.Element}
+ */
+function App() {
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/dev" element={<DeveloperLandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<AuthGuard />}>
+          <Route element={<MainLayout />}>
+            <Route index element={<Navigate to="/ai-tool/home" replace />} />
+            <Route path="ai-tool/home" element={<HomePage />} />
+            <Route path="ai-tool/script" element={<ScriptLLMPage />} />
+            <Route path="ai-tool/image/generate" element={<ImageGeneratePage />} />
+            <Route path="ai-tool/video" element={<VideoGeneratePage />} />
+            <Route path="ai-tool/digital-human" element={<DigitalHumanPage />} />
+            <Route path="ai-tool/api" element={<ApiPage />} />
+          </Route>
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
+  );
+}
+
+export default App;
+
+/* ===== 文件：src/components/auth/AuthGuard.jsx ===== */
+import React from 'react';
+import { Navigate, useLocation, Outlet } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+
+/**
+ * 路由守卫：未登录时重定向到登录页；已登录时渲染子路由出口
+ * @returns {JSX.Element}
+ */
+export function AuthGuard() {
+  const { isLoggedIn } = useAuth();
+  const location = useLocation();
+
+  if (!isLoggedIn) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  return <Outlet />;
+}
+
+/* ===== 文件：src/components/layout/Header.jsx ===== */
+import React from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+
+/** 导航项配置，与疆影官网结构一致 */
+const NAV_ITEMS = [
+  { path: '/ai-tool/home', label: '首页' },
+  { path: '/ai-tool/script', label: '大模型·剧本' },
+  { path: '/ai-tool/image/generate', label: '文生图' },
+  { path: '/ai-tool/video', label: '视频生成' },
+  { path: '/ai-tool/digital-human', label: '数字人' },
+  { path: '/ai-tool/api', label: 'API 对接' },
+];
+
+/**
+ * 顶部导航栏（可替换样式）
+ * @returns {JSX.Element}
+ */
+export function Header() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  return (
+    <header className="glass sticky top-0 z-40 border-b border-white/[0.08]">
+      <div className="header-bar mx-auto flex max-w-7xl items-center justify-between px-4" style={{ height: 'var(--header-h, 4rem)' }}>
+        <Link to="/ai-tool/home" className="flex items-center gap-2 font-semibold tracking-tight">
+          <img src="/logo.png" alt="猛兽影" className="header-logo" />
+          <span className="header-logo-text text-white hidden sm:inline"> AI</span>
+        </Link>
+        <nav className="hidden md:flex items-center gap-1">
+          {NAV_ITEMS.map(({ path, label }) => {
+            const isActive = location.pathname === path || (path !== '/ai-tool/home' && location.pathname.startsWith(path));
+            return (
+              <Link
+                key={path}
+                to={path}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="flex items-center gap-2">
+          {user && (
+            <span className="text-sm text-zinc-400">欢迎，{user}</span>
+          )}
+          <Link
+            to="/ai-tool/home"
+            className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-400"
+          >
+            开始创作
+          </Link>
+          {user && (
+            <button
+              type="button"
+              onClick={() => { logout(); navigate('/'); }}
+              className="rounded-xl border border-zinc-600 px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-800"
+            >
+              退出
+            </button>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ===== 文件：src/components/layout/MainLayout.jsx ===== */
+import React from 'react';
+import { Outlet } from 'react-router-dom';
+import { Header } from './Header';
+import { DynamicBackground } from '../ui/DynamicBackground';
+
+/**
+ * 主布局：动态背景 + 顶栏 + 子路由出口
+ * @returns {JSX.Element}
+ */
+export function MainLayout() {
+  return (
+    <div className="relative min-h-screen flex flex-col bg-[#0a0a0f] text-white">
+      <DynamicBackground />
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <Header />
+        <main className="min-h-[calc(100vh-3.5rem)] flex-1">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}
+
+/* ===== 文件：src/components/ui/Badge.jsx ===== */
+import React from 'react';
+
+/**
+ * 可替换的徽标/标签组件
+ * @param {Object} props
+ * @param {React.ReactNode} props.children - 文案
+ * @param {'default'|'primary'|'success'} [props.variant='default'] - 样式变体
+ * @param {string} [props.className] - 额外类名
+ */
+export function Badge({ children, variant = 'default', className = '', onClick, ...rest }) {
+  const variants = {
+    default: 'bg-zinc-700 text-zinc-300',
+    primary: 'bg-emerald-500/20 text-emerald-300',
+    success: 'bg-emerald-500/20 text-emerald-300',
+  };
+  const cls = `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variants[variant]} ${className}`.trim();
+  const Comp = onClick ? 'button' : 'span';
+  return (
+    <Comp type={onClick ? 'button' : undefined} className={cls} onClick={onClick} {...rest}>
+      {children}
+    </Comp>
+  );
+}
+
+/* ===== 文件：src/components/ui/Button.jsx ===== */
+import React from 'react';
+
+/**
+ * 可替换的按钮组件
+ * @param {Object} props
+ * @param {'primary'|'secondary'|'ghost'|'outline'} [props.variant='primary'] - 按钮变体
+ * @param {'md'|'sm'|'lg'} [props.size='md'] - 尺寸
+ * @param {boolean} [props.disabled] - 是否禁用
+ * @param {React.ReactNode} props.children - 子内容
+ * @param {string} [props.className] - 额外类名
+ * @param {React.CSSProperties} [props.style] - 内联样式
+ */
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  disabled = false,
+  children,
+  className = '',
+  style,
+  ...rest
+}) {
+  const base = 'inline-flex items-center justify-center font-medium rounded-xl transition-colors';
+  const variants = {
+    primary: 'bg-emerald-500 text-white hover:bg-emerald-400 active:bg-emerald-600',
+    secondary: 'bg-zinc-700 text-white hover:bg-zinc-600',
+    ghost: 'text-slate-300 hover:bg-white/10',
+    outline: 'border border-zinc-500 text-slate-300 hover:bg-white/5',
+  };
+  const sizes = {
+    sm: 'px-3 py-1.5 text-sm',
+    md: 'px-5 py-2.5 text-base',
+    lg: 'px-6 py-3 text-lg',
+  };
+  const cls = `${base} ${variants[variant]} ${sizes[size]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`.trim();
+  return (
+    <button className={cls} style={style} disabled={disabled} {...rest}>
+      {children}
+    </button>
+  );
+}
+
+/* ===== 文件：src/components/ui/Card.jsx ===== */
+import React from 'react';
+
+/**
+ * 可替换的卡片容器组件
+ * @param {Object} props
+ * @param {React.ReactNode} props.children - 子内容
+ * @param {string} [props.className] - 额外类名
+ * @param {boolean} [props.hoverable] - 是否悬停高亮
+ * @param {() => void} [props.onClick] - 点击回调（可选，用于可点击卡片）
+ */
+export function Card({ children, className = '', hoverable = false, onClick, ...rest }) {
+  const base = 'glass rounded-2xl border border-white/[0.1] overflow-hidden bg-white/[0.06] backdrop-blur-[24px]';
+  const hover = hoverable ? 'glass-hover transition-colors cursor-pointer' : '';
+  const cls = `${base} ${hover} ${className}`.trim();
+  const Comp = onClick ? 'button' : 'div';
+  return (
+    <Comp type={onClick ? 'button' : undefined} className={cls} onClick={onClick} {...rest}>
+      {children}
+    </Comp>
+  );
+}
+
+/* ===== 文件：src/components/ui/DynamicBackground.jsx ===== */
+import React from 'react';
+
+/**
+ * 全屏动态背景：光球漂移 + 若隐若现的电路图，随光球移动被照亮，增强科技感
+ * @returns {JSX.Element}
+ */
+export function DynamicBackground() {
+  return (
+    <div className="dynamic-bg" aria-hidden>
+      {/* 绿色光球 */}
+      <div className="dynamic-bg__orb dynamic-bg__orb--1" />
+      <div className="dynamic-bg__orb dynamic-bg__orb--2" />
+      <div className="dynamic-bg__orb dynamic-bg__orb--3" />
+      <div className="dynamic-bg__orb dynamic-bg__orb--4" />
+      <div className="dynamic-bg__orb dynamic-bg__orb--5" />
+      {/* 电路图层：若隐若现 */}
+      <div className="dynamic-bg__circuit" />
+      {/* 与光球同步的“光照”层，照亮电路 */}
+      <div className="dynamic-bg__circuit-lights">
+        <div className="dynamic-bg__circuit-light dynamic-bg__circuit-light--1" />
+        <div className="dynamic-bg__circuit-light dynamic-bg__circuit-light--2" />
+        <div className="dynamic-bg__circuit-light dynamic-bg__circuit-light--3" />
+        <div className="dynamic-bg__circuit-light dynamic-bg__circuit-light--4" />
+        <div className="dynamic-bg__circuit-light dynamic-bg__circuit-light--5" />
+      </div>
+    </div>
+  );
+}
+
+/* ===== 文件：src/components/ui/Input.jsx ===== */
+import React, { forwardRef } from 'react';
+
+/**
+ * 可替换的输入框组件
+ * @param {Object} props
+ * @param {string} [props.placeholder] - 占位文案
+ * @param {string} [props.value] - 受控值
+ * @param {(v: string) => void} [props.onChange] - 变更回调
+ * @param {string} [props.className] - 额外类名
+ * @param {'text'|'textarea'|'password'|'email'|'number'} [props.type='text'] - 输入类型
+ * @param {React.Ref} [ref] - 转发给 textarea / input
+ */
+export const Input = forwardRef(function Input({
+  placeholder = '',
+  value,
+  onChange,
+  className = '',
+  type = 'text',
+  rows = 3,
+  ...rest
+}, ref) {
+  const base = 'w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.1] text-slate-100 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500 focus:bg-white/[0.06] backdrop-blur-xl transition-colors';
+  if (type === 'textarea') {
+    return (
+      <textarea
+        ref={ref}
+        className={`${base} resize-none ${className}`}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
+        rows={rows}
+        {...rest}
+      />
+    );
+  }
+  return (
+    <input
+      ref={ref}
+      type={type}
+      className={`${base} ${className}`}
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange?.(e.target.value)}
+      {...rest}
+    />
+  );
+});
+
+/* ===== 文件：src/components/ui/Modal.jsx ===== */
+import React from 'react';
+
+/**
+ * 可替换的弹窗组件
+ * @param {Object} props
+ * @param {boolean} props.open - 是否打开
+ * @param {() => void} [props.onClose] - 关闭回调
+ * @param {React.ReactNode} props.children - 内容
+ * @param {string} [props.title] - 标题
+ */
+export function Modal({ open, onClose, children, title = '' }) {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="glass glass-strong rounded-2xl border border-white/[0.12] shadow-2xl max-w-lg w-full max-h-[90vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {title && (
+          <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.1]">
+            <h3 className="text-lg font-semibold text-white">{title}</h3>
+            {onClose && (
+              <button type="button" onClick={onClose} className="text-zinc-400 hover:text-white p-1">
+                ×
+              </button>
+            )}
+          </div>
+        )}
+        <div className="p-6">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== 文件：src/components/ui/Tab.jsx ===== */
+import React from 'react';
+
+/**
+ * 可替换的标签页组件
+ * @param {Object} props
+ * @param {Array<{ key: string, label: string }>} props.tabs - 标签配置
+ * @param {string} props.activeKey - 当前激活的 key
+ * @param {(key: string) => void} props.onChange - 切换回调
+ * @param {string} [props.className] - 容器类名
+ */
+export function Tab({ tabs, activeKey, onChange, className = '' }) {
+  return (
+    <div className={`glass flex gap-1 p-1 rounded-xl border border-white/[0.1] ${className}`}>
+      {tabs.map(({ key, label }) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onChange(key)}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeKey === key ? 'bg-emerald-500 text-white' : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ===== 文件：src/context/AuthContext.jsx ===== */
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+
+const STORAGE_KEY = 'jiangying_auth';
+
+/** @type {{ user: string | null; login: (user: string, password: string) => boolean; logout: () => void; isLoggedIn: boolean }} */
+const AuthContext = createContext(null);
+
+/**
+ * 从本地存储恢复登录状态
+ * @returns {{ user: string } | null}
+ */
+function loadStoredAuth() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (data?.user) return { user: data.user };
+    }
+  } catch (_) {
+    // ignore
+  }
+  return null;
+}
+
+/**
+ * 鉴权上下文：登录状态与登录/登出方法（演示用，未对接真实后端）
+ * @param {{ children: React.ReactNode }} props
+ * @returns {JSX.Element}
+ */
+export function AuthProvider({ children }) {
+  const [auth, setAuth] = useState(loadStoredAuth);
+
+  useEffect(() => {
+    if (auth) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ user: auth.user }));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [auth]);
+
+  const login = useCallback((username, password) => {
+    if (!username?.trim()) return false;
+    setAuth({ user: username.trim() });
+    return true;
+  }, []);
+
+  const logout = useCallback(() => {
+    setAuth(null);
+  }, []);
+
+  const value = {
+    user: auth?.user ?? null,
+    isLoggedIn: !!auth?.user,
+    login,
+    logout,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+/**
+ * @returns {{ user: string | null; isLoggedIn: boolean; login: (user: string, password: string) => boolean; logout: () => void }}
+ */
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+}
+
+/* ===== 文件：src/main.jsx ===== */
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import App from './App';
+import './styles/index.css';
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </BrowserRouter>
+  </React.StrictMode>
+);
+
+/* ===== 文件：src/pages/ApiPage.jsx ===== */
+import React, { useState, useCallback } from 'react';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
+import { Badge } from '../components/ui/Badge';
+
+const STORAGE_KEY = 'jiangying_api_config';
+
+/**
+ * 圆形指示灯：灰=未检测，蓝旋转=检测中，绿=通过，红=失败
+ * @param {{ status: null|'testing'|'ok'|'fail', message?: string }} props
+ */
+function StatusLight({ status, message }) {
+  if (status === 'testing') {
+    return (
+      <span className="relative flex h-4 w-4" title="检测中…">
+        <span className="absolute inset-0 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
+      </span>
+    );
+  }
+  if (status === 'ok') {
+    return (
+      <span className="relative flex h-4 w-4" title={message || '已连通'}>
+        <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400 opacity-40" />
+        <span className="relative inline-flex h-4 w-4 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+      </span>
+    );
+  }
+  if (status === 'fail') {
+    return (
+      <span className="relative flex h-4 w-4" title={message || '连接失败'}>
+        <span className="absolute inset-0 animate-ping rounded-full bg-red-400 opacity-30" />
+        <span className="relative inline-flex h-4 w-4 rounded-full bg-red-400 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+      </span>
+    );
+  }
+  return (
+    <span className="relative flex h-4 w-4" title="未检测">
+      <span className="relative inline-flex h-4 w-4 rounded-full bg-zinc-600" />
+    </span>
+  );
+}
+
+/** 默认配置结构 */
+const defaultConfig = {
+  baseUrl: '',
+  apiKey: '',
+  /** 剧作大模型可配独立 baseUrl；charactersEndpoint 可选，用于「大模型提取角色信息」 */
+  scriptLLM: { enabled: true, endpoint: '/v1/script/breakdown', baseUrl: '', charactersEndpoint: '' },
+  image: { enabled: true, endpoint: '/v1/image/generate' },
+  video: { enabled: true, endpoint: '/v1/video/generate' },
+  digitalHuman: { enabled: true, endpoint: '/v1/digital-human' },
+};
+
+/**
+ * 从本地存储读取 API 配置
+ * @returns {typeof defaultConfig}
+ */
+function loadConfig() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { ...defaultConfig, ...parsed };
+    }
+  } catch (_) {
+    // ignore
+  }
+  return { ...defaultConfig };
+}
+
+/**
+ * 单个服务的连通性检测结果
+ * @typedef {{ status: null|'testing'|'ok'|'fail', message: string }} TestResult
+ */
+
+/**
+ * 对指定 URL 做连通探测（HEAD → GET → POST 逐级尝试），超时 8 秒
+ * @param {string} url - 完整端点 URL
+ * @param {string} [apiKey] - 可选 Bearer Token
+ * @returns {Promise<{ ok: boolean, message: string }>}
+ */
+async function probeEndpoint(url, apiKey) {
+  const headers = {};
+  if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    for (const method of ['HEAD', 'GET', 'POST']) {
+      try {
+        const opts = { method, headers, signal: ctrl.signal };
+        if (method === 'POST') opts.headers = { ...headers, 'Content-Type': 'application/json' };
+        if (method === 'POST') opts.body = '{}';
+        const res = await fetch(url, opts);
+        clearTimeout(timer);
+        if (res.ok || res.status === 401 || res.status === 403) {
+          return { ok: true, message: `${method} → ${res.status} OK` };
+        }
+        if (res.status === 405) continue;
+        return { ok: false, message: `${method} → HTTP ${res.status}` };
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+        continue;
+      }
+    }
+    return { ok: false, message: '所有方法均无响应' };
+  } catch (e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') return { ok: false, message: '超时（8s）' };
+    return { ok: false, message: e?.message || '连接失败' };
+  }
+}
+
+/**
+ * API 对接页面 - 配置 Base URL、API Key、各服务端点及测试连接
+ * @returns {JSX.Element}
+ */
+export function ApiPage() {
+  const [config, setConfig] = useState(loadConfig);
+
+  /** 每个服务独立的检测状态，互不干扰 */
+  const [testResults, setTestResults] = useState(
+    /** @type {Record<string, TestResult>} */
+    {}
+  );
+
+  const update = useCallback((key, value) => {
+    setConfig((prev) => {
+      const next = { ...prev, [key]: value };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const updateNested = useCallback(
+    (service, field, value) => {
+      setConfig((prev) => {
+        const next = {
+          ...prev,
+          [service]: { ...prev[service], [field]: value },
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        return next;
+      });
+    },
+    []
+  );
+
+  /**
+   * 对单个服务发起连通检测，不影响其他服务的状态
+   * @param {string} serviceKey - 服务标识
+   * @param {string} fullUrl - 完整请求 URL
+   */
+  const testService = useCallback(async (serviceKey, fullUrl) => {
+    setTestResults((prev) => ({ ...prev, [serviceKey]: { status: 'testing', message: '' } }));
+    if (!fullUrl || fullUrl === '/') {
+      setTestResults((prev) => ({ ...prev, [serviceKey]: { status: 'fail', message: '未配置地址' } }));
+      return;
+    }
+    const result = await probeEndpoint(fullUrl, config.apiKey);
+    setTestResults((prev) => ({
+      ...prev,
+      [serviceKey]: { status: result.ok ? 'ok' : 'fail', message: result.message },
+    }));
+  }, [config.apiKey]);
+
+  /**
+   * 一键检测所有已启用的服务（并发执行，互不阻塞）
+   */
+  const testAll = useCallback(async () => {
+    const tasks = [];
+    const base = (config.baseUrl || '').replace(/\/$/, '');
+    const scriptBase = (config.scriptLLM?.baseUrl || base || '').replace(/\/$/, '');
+
+    if (config.scriptLLM?.enabled !== false) {
+      const ep = config.scriptLLM?.endpoint || '/v1/script/breakdown';
+      tasks.push(testService('scriptLLM', `${scriptBase}${ep.startsWith('/') ? '' : '/'}${ep}`));
+    }
+    if (config.image?.enabled !== false) {
+      const ep = config.image?.endpoint || '/v1/image/generate';
+      tasks.push(testService('image', `${base}${ep.startsWith('/') ? '' : '/'}${ep}`));
+    }
+    if (config.video?.enabled !== false) {
+      const ep = config.video?.endpoint || '/v1/video/generate';
+      tasks.push(testService('video', `${base}${ep.startsWith('/') ? '' : '/'}${ep}`));
+    }
+    if (config.digitalHuman?.enabled !== false) {
+      const ep = config.digitalHuman?.endpoint || '/v1/digital-human';
+      tasks.push(testService('digitalHuman', `${base}${ep.startsWith('/') ? '' : '/'}${ep}`));
+    }
+    await Promise.allSettled(tasks);
+  }, [config, testService]);
+
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-8">
+      <h1 className="mb-2 text-2xl font-bold text-white">API 对接</h1>
+      <p className="mb-8 text-zinc-400">剧作大模型与视频/图生成是不同能力，需分别配置；此处可设通用 Base URL 及剧作大模型独立地址。</p>
+
+      {/* 通用配置 */}
+      <Card className="mb-6 p-6">
+        <h2 className="mb-4 text-lg font-semibold text-white">通用配置</h2>
+        <p className="mb-4 text-xs text-zinc-500">图片生成、视频生成、数字人共用下方 Base URL；剧作大模型可单独配置独立地址（见下方服务端点）。</p>
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">Base URL（视频/图/数字人）</label>
+            <Input
+              placeholder="https://api.example.com"
+              value={config.baseUrl}
+              onChange={(v) => update('baseUrl', v)}
+            />
+            <p className="mt-1 text-xs text-zinc-500">视觉生成与数字人服务根地址，不要以 / 结尾</p>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">API Key（可选）</label>
+            <Input
+              type="password"
+              placeholder="Bearer token 或 API Key"
+              value={config.apiKey}
+              onChange={(v) => update('apiKey', v)}
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="primary"
+              className="btn-glow"
+              onClick={testAll}
+              disabled={Object.values(testResults).some((r) => r?.status === 'testing')}
+            >
+              {Object.values(testResults).some((r) => r?.status === 'testing') ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  检测中…
+                </span>
+              ) : '🔌 一键检测全部服务'}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* 为何要区分：剧作大模型 vs 视频/图模型 */}
+      <Card className="mb-6 border-amber-500/10 p-4">
+        <h3 className="mb-2 text-sm font-semibold text-amber-400/90">为何不能一个 API 解决所有问题</h3>
+        <p className="mb-2 text-xs text-zinc-400">
+          剧作栏需要的是<strong className="text-zinc-300">文本大模型</strong>（剧本拆分、景别运镜、角色提取等细节），而视频生成、文生图是<strong className="text-zinc-300">视觉模型</strong>，能力不同。建议剧作大模型配置独立服务地址，视频/图/数字人共用另一套 Base URL。
+        </p>
+        <ul className="list-inside list-disc text-xs text-zinc-500">
+          <li>剧作大模型：理解剧本、输出结构化分镜与角色信息</li>
+          <li>视频/图模型：根据分镜描述生成画面，不处理剧作细节</li>
+        </ul>
+      </Card>
+
+      {/* 与剧作栏联动说明 */}
+      <Card className="mb-6 border-emerald-500/10 p-4">
+        <h3 className="mb-2 text-sm font-semibold text-emerald-400/90">与剧作栏（大模型·剧本）联动</h3>
+        <ul className="list-inside list-disc space-y-1 text-xs text-zinc-400">
+          <li><strong className="text-zinc-300">剧作大模型</strong>：可填独立 Base URL；请求体含「固定关键词 + 上下文记忆 + 剧本正文」，仅用于拆分与角色提取。</li>
+          <li><strong className="text-zinc-300">固定关键词、上下文记忆、工作项目</strong>：本地保存，由前端拼入剧作大模型请求体。</li>
+          <li><strong className="text-zinc-300">文生图、文生视频</strong>：走通用 Base URL，仅接收分镜 prompt，不含剧作固定关键词。</li>
+        </ul>
+      </Card>
+
+      {/* 各服务端点 */}
+      <Card className="p-6">
+        <h2 className="mb-4 text-lg font-semibold text-white">服务端点</h2>
+        <p className="mb-4 text-sm text-zinc-400">剧作大模型可配独立 Base URL；其余能力相对「Base URL（视频/图/数字人）」。</p>
+        <div className="space-y-4">
+          <div className="glass glass-hover flex flex-col gap-3 rounded-xl border border-amber-500/20 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-white">剧作大模型</span>
+                  {config.scriptLLM?.enabled !== false && <Badge variant="primary">已启用</Badge>}
+                </div>
+                <p className="mt-1 text-xs text-zinc-500">剧本拆分剧集/分镜、角色提取；请求体含固定关键词、上下文记忆、剧本。建议使用专用文本/LLM 服务。</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2.5">
+                <StatusLight status={testResults.scriptLLM?.status} message={testResults.scriptLLM?.message} />
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 transition hover:bg-amber-500/20 hover:border-amber-400/60 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={testResults.scriptLLM?.status === 'testing'}
+                  onClick={() => {
+                    const base = (config.scriptLLM?.baseUrl || config.baseUrl || '').replace(/\/$/, '');
+                    const ep = config.scriptLLM?.endpoint || '/v1/script/breakdown';
+                    testService('scriptLLM', `${base}${ep.startsWith('/') ? '' : '/'}${ep}`);
+                  }}
+                >
+                  <span className="text-sm">⚡</span> 检测连通
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 sm:pl-0">
+              <div>
+                <label className="mb-0.5 block text-xs text-zinc-500">独立 Base URL（可选）</label>
+                <Input
+                  placeholder="留空则用通用 Base URL"
+                  value={config.scriptLLM?.baseUrl ?? ''}
+                  onChange={(v) => updateNested('scriptLLM', 'baseUrl', v)}
+                  className="text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-0.5 block text-xs text-zinc-500">拆分端点路径</label>
+                <Input
+                  placeholder="/v1/script/breakdown"
+                  value={config.scriptLLM?.endpoint ?? ''}
+                  onChange={(v) => updateNested('scriptLLM', 'endpoint', v)}
+                  className="text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-0.5 block text-xs text-zinc-500">角色提取端点（可选）</label>
+                <Input
+                  placeholder="如 /v1/script/characters，留空则剧本页用本地规则"
+                  value={config.scriptLLM?.charactersEndpoint ?? ''}
+                  onChange={(v) => updateNested('scriptLLM', 'charactersEndpoint', v)}
+                  className="text-sm"
+                />
+              </div>
+            </div>
+          </div>
+          {[
+            { key: 'image', label: '图片生成', desc: '文生图、图生图接口' },
+            { key: 'video', label: '视频生成', desc: '文本/图片生成视频' },
+            { key: 'digitalHuman', label: '数字人', desc: '数字人、动作模仿' },
+          ].map(({ key, label, desc }) => (
+            <div
+              key={key}
+              className="glass glass-hover flex flex-col gap-3 rounded-xl border border-white/[0.1] p-4"
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium text-white">{label}</span>
+                    {config[key]?.enabled !== false && <Badge variant="primary">已启用</Badge>}
+                  </div>
+                  <p className="mt-1 text-xs text-zinc-500">{desc}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2.5">
+                  <StatusLight status={testResults[key]?.status} message={testResults[key]?.message} />
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 transition hover:bg-emerald-500/20 hover:border-emerald-400/60 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={testResults[key]?.status === 'testing'}
+                    onClick={() => {
+                      const base = (config.baseUrl || '').replace(/\/$/, '');
+                      const ep = config[key]?.endpoint || '/v1/...';
+                      testService(key, `${base}${ep.startsWith('/') ? '' : '/'}${ep}`);
+                    }}
+                  >
+                    <span className="text-sm">⚡</span> 检测连通
+                  </button>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Input
+                  placeholder="/v1/..."
+                  value={config[key]?.endpoint ?? ''}
+                  onChange={(v) => updateNested(key, 'endpoint', v)}
+                  className="text-sm"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <p className="mt-6 text-sm text-zinc-500">
+        配置将保存在浏览器本地，仅用于本机请求。生产环境请使用环境变量或服务端配置管理密钥。
+      </p>
+      <p className="mt-2 text-xs text-zinc-600">
+        剧作栏工作项目、固定关键词、上下文记忆亦存于本地，与上述 API 配置独立；对接剧作大模型时由前端将三者与剧本一并发送。
+      </p>
+    </div>
+  );
+}
+
+/* ===== 文件：src/pages/DeveloperLandingPage.jsx ===== */
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+
+/**
+ * 开发者工具落地页 - 深色模式、代码预览、功能对比、集成与文档入口
+ * @returns {JSX.Element}
+ */
+export function DeveloperLandingPage() {
+  const navigate = useNavigate();
+
+  const scrollTo = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const integrations = [
+    { name: 'GitHub', icon: '◇' },
+    { name: 'npm', icon: '◆' },
+    { name: 'VS Code', icon: '▣' },
+    { name: 'CLI', icon: '⟩' },
+    { name: 'REST API', icon: '{}' },
+    { name: 'Webhooks', icon: '⚡' },
+  ];
+
+  const comparison = [
+    { feature: 'API rate limit', free: '1K req/day', pro: '100K req/day', team: 'Unlimited' },
+    { feature: 'Projects', free: '1', pro: '10', team: 'Unlimited' },
+    { feature: 'Team members', free: '—', pro: '—', team: '∞' },
+    { feature: 'SSO / SAML', free: '—', pro: '—', team: '✓' },
+    { feature: 'Priority support', free: '—', pro: '✓', team: '✓' },
+    { feature: 'Audit logs', free: '—', pro: '✓', team: '✓' },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#0d0d12] text-zinc-100 antialiased">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-zinc-800/80 bg-[#0d0d12]/90 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+          <span className="font-semibold tracking-tight text-white">DevTools</span>
+          <nav className="flex items-center gap-6 text-sm">
+            <button type="button" onClick={() => scrollTo('snippet')} className="text-zinc-400 hover:text-white">
+              Code
+            </button>
+            <button type="button" onClick={() => scrollTo('compare')} className="text-zinc-400 hover:text-white">
+              Compare
+            </button>
+            <button type="button" onClick={() => scrollTo('integrations')} className="text-zinc-400 hover:text-white">
+              Integrations
+            </button>
+            <a
+              href="/docs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-indigo-400 hover:text-indigo-300"
+            >
+              Documentation →
+            </a>
+          </nav>
+          <button
+            type="button"
+            onClick={() => navigate('/login')}
+            className="rounded-lg bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+          >
+            Get API key
+          </button>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-5xl px-4 py-16 md:py-24">
+        {/* Hero */}
+        <section className="mb-20 text-center">
+          <h1 className="mb-3 text-3xl font-bold tracking-tight text-white md:text-4xl">
+            Developer tools that ship.
+          </h1>
+          <p className="mx-auto max-w-xl text-zinc-400">
+            One API for lint, test, and deploy. SDKs for JS, Python, Go. Docs and examples included.
+          </p>
+        </section>
+
+        {/* Code snippet preview */}
+        <section id="snippet" className="mb-20">
+          <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-zinc-500">
+            Quick start
+          </h2>
+          <div className="overflow-hidden rounded-xl border border-zinc-800 bg-[#16161d]">
+            <div className="flex items-center gap-2 border-b border-zinc-800 px-4 py-2">
+              <span className="h-2 w-2 rounded-full bg-zinc-600" />
+              <span className="h-2 w-2 rounded-full bg-zinc-600" />
+              <span className="h-2 w-2 rounded-full bg-zinc-600" />
+              <span className="ml-2 text-xs text-zinc-500">index.js</span>
+            </div>
+            <pre className="code-block overflow-x-auto p-4">
+              <code>
+                <span className="syntax-keyword">const</span>{' '}
+                <span className="syntax-function">client</span> ={' '}
+                <span className="syntax-builtin">DevTools</span>
+                <span className="syntax-operator">.</span>
+                <span className="syntax-function">create</span>
+                <span className="syntax-operator">(</span>
+                <span className="syntax-string">{'{\n  apiKey: process.env.DEVTOOLS_API_KEY,\n}'}</span>
+                <span className="syntax-operator">)</span>
+                <span className="syntax-comment">;</span>
+                {'\n\n'}
+                <span className="syntax-keyword">await</span>{' '}
+                <span className="syntax-function">client</span>
+                <span className="syntax-operator">.</span>
+                <span className="syntax-property">lint</span>
+                <span className="syntax-operator">(</span>
+                <span className="syntax-string">{'"src/**"'}</span>
+                <span className="syntax-operator">)</span>
+                <span className="syntax-comment">;</span>
+                {'\n'}
+                <span className="syntax-keyword">await</span>{' '}
+                <span className="syntax-function">client</span>
+                <span className="syntax-operator">.</span>
+                <span className="syntax-property">deploy</span>
+                <span className="syntax-operator">(</span>
+                <span className="syntax-string">{'{ target: "prod" }'}</span>
+                <span className="syntax-operator">)</span>
+                <span className="syntax-comment">;</span>
+              </code>
+            </pre>
+          </div>
+
+          <div className="mt-6 overflow-hidden rounded-xl border border-zinc-800 bg-[#16161d]">
+            <div className="flex items-center gap-2 border-b border-zinc-800 px-4 py-2">
+              <span className="h-2 w-2 rounded-full bg-zinc-600" />
+              <span className="h-2 w-2 rounded-full bg-zinc-600" />
+              <span className="h-2 w-2 rounded-full bg-zinc-600" />
+              <span className="ml-2 text-xs text-zinc-500">curl</span>
+            </div>
+            <pre className="code-block overflow-x-auto p-4">
+              <code>
+                <span className="syntax-comment"># Run checks via REST</span>
+                {'\n'}
+                <span className="syntax-keyword">curl</span> -X POST https://api.devtools.example/v1/run \
+                {'\n  '}
+                -H <span className="syntax-string">"Authorization: Bearer $API_KEY"</span> \
+                {'\n  '}
+                -d <span className="syntax-string">{'{"project": "my-app"}'}</span>
+              </code>
+            </pre>
+          </div>
+        </section>
+
+        {/* Feature comparison table */}
+        <section id="compare" className="mb-20">
+          <h2 className="mb-6 text-sm font-medium uppercase tracking-wider text-zinc-500">
+            Compare plans
+          </h2>
+          <div className="overflow-hidden rounded-xl border border-zinc-800">
+            <table className="w-full border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-zinc-800 bg-zinc-900/50">
+                  <th className="px-4 py-3 font-medium text-zinc-300">Feature</th>
+                  <th className="px-4 py-3 font-medium text-zinc-300">Free</th>
+                  <th className="px-4 py-3 font-medium text-white">Pro</th>
+                  <th className="px-4 py-3 font-medium text-indigo-400">Team</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparison.map((row, i) => (
+                  <tr
+                    key={row.feature}
+                    className={`border-b border-zinc-800/80 ${i % 2 === 0 ? 'bg-zinc-900/30' : ''}`}
+                  >
+                    <td className="px-4 py-3 text-zinc-300">{row.feature}</td>
+                    <td className="px-4 py-3 text-zinc-500">{row.free}</td>
+                    <td className="px-4 py-3 text-zinc-300">{row.pro}</td>
+                    <td className="px-4 py-3 text-zinc-300">{row.team}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Integration logos */}
+        <section id="integrations" className="mb-20">
+          <h2 className="mb-6 text-sm font-medium uppercase tracking-wider text-zinc-500">
+            Integrations
+          </h2>
+          <div className="flex flex-wrap justify-center gap-4 md:gap-6">
+            {integrations.map((item) => (
+              <div
+                key={item.name}
+                className="flex h-20 w-28 flex-col items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-500 transition hover:border-zinc-600 hover:text-zinc-300"
+              >
+                <span className="mb-1 text-2xl text-indigo-400/80">{item.icon}</span>
+                <span className="text-xs font-medium">{item.name}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* CTA + Docs */}
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8 text-center md:p-12">
+          <h2 className="mb-2 text-xl font-semibold text-white">Ready to integrate?</h2>
+          <p className="mb-6 text-zinc-400">
+            Read the docs, grab an API key, and go live in minutes.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <a
+              href="/docs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-500"
+            >
+              Documentation →
+            </a>
+            <button
+              type="button"
+              onClick={() => navigate('/login')}
+              className="rounded-lg border border-zinc-600 px-5 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-800"
+            >
+              Get API key
+            </button>
+          </div>
+        </section>
+      </main>
+
+      <footer className="mt-20 border-t border-zinc-800 px-4 py-8 text-center text-xs text-zinc-500">
+        DevTools · Documentation · Status · Terms
+      </footer>
+    </div>
+  );
+}
+
+/* ===== 文件：src/pages/DigitalHumanPage.jsx ===== */
+import React, { useState, useRef, useEffect } from 'react';
+import { Input } from '../components/ui/Input';
+import { Card } from '../components/ui/Card';
+
+const ACCEPT_AUDIO = 'audio/*';
+const ACCEPT_IMAGES = 'image/*';
+
+/** 视频画质 / 格式 / 编码（数字人单图视频输出） */
+const OUTPUT_QUALITIES = [
+  { value: 'hd', label: '高清' },
+  { value: '2k', label: '2K' },
+  { value: '4k', label: '4K' },
+];
+const OUTPUT_FORMATS = [
+  { value: 'mov', label: 'MOV' },
+  { value: 'mp4', label: 'MP4' },
+];
+/** 视频编码格式（H.264 / H.265，与输出格式 MOV/MP4 配合） */
+const OUTPUT_CODECS = [
+  { value: 'h264', label: 'H.264' },
+  { value: 'h265', label: 'H.265' },
+];
+
+/** 模式：单图视频生成 | 推流直播 */
+const MODE_VIDEO = 'video';
+const MODE_LIVE = 'live';
+
+/**
+ * 数字人页 - 支持单图视频生成与推流直播
+ * 模式一：角色 + 说话内容/音频 → 生成数字人单图视频
+ * 模式二：角色 + 推流地址 → 数字人直接推流直播
+ */
+export function DigitalHumanPage() {
+  const [mode, setMode] = useState(MODE_VIDEO);
+  const [speakContent, setSpeakContent] = useState('');
+  const [actionDesc, setActionDesc] = useState('');
+  const [audioFile, setAudioFile] = useState(null);
+  const [characterFile, setCharacterFile] = useState(null);
+  const [characterPreviewUrl, setCharacterPreviewUrl] = useState('');
+  /** 推流直播：推流地址（RTMP URL） */
+  const [streamUrl, setStreamUrl] = useState('');
+  /** 推流直播：推流密钥（可选，与地址拼接） */
+  const [streamKey, setStreamKey] = useState('');
+  /** 推流直播：是否正在推流 */
+  const [isStreaming, setIsStreaming] = useState(false);
+  /** 单图视频：生成中状态 */
+  const [videoGenerating, setVideoGenerating] = useState(false);
+  /** 单图视频输出：画质、格式、编码 */
+  const [outputQuality, setOutputQuality] = useState('2k');
+  const [outputFormat, setOutputFormat] = useState('mp4');
+  const [outputCodec, setOutputCodec] = useState('h264');
+  const [outputQualityOpen, setOutputQualityOpen] = useState(false);
+  const [outputFormatOpen, setOutputFormatOpen] = useState(false);
+  const [outputCodecOpen, setOutputCodecOpen] = useState(false);
+  const audioInputRef = useRef(null);
+  const characterInputRef = useRef(null);
+
+  /** 推流中离开页面前提示，防止误关 */
+  useEffect(() => {
+    if (!isStreaming) return;
+    const onBeforeUnload = (e) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isStreaming]);
+
+  useEffect(() => {
+    if (!characterFile) {
+      setCharacterPreviewUrl('');
+      return;
+    }
+    const url = URL.createObjectURL(characterFile);
+    setCharacterPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [characterFile]);
+
+  const handleAudioChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) setAudioFile(file);
+    e.target.value = '';
+  };
+
+  const handleCharacterChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file?.type.startsWith('image/')) setCharacterFile(file);
+    e.target.value = '';
+  };
+
+  /** 开始推流：后续可对接真实推流 SDK/API */
+  const handleStartStream = () => {
+    const url = (streamUrl || '').trim();
+    if (!url) return;
+    setIsStreaming(true);
+    // TODO: 调用推流 API，传入 streamUrl、streamKey、角色/音色/说话内容等
+  };
+
+  /** 停止推流 */
+  const handleStopStream = () => {
+    setIsStreaming(false);
+    // TODO: 断开推流
+  };
+
+  /**
+   * 单图视频生成。请求体会带上 outputQuality(高清|2k|4k)、outputFormat(mov|mp4)、outputCodec(h264|h265)，
+   * 只有后端按这些参数生成并返回视频后，选项才真正生效；未配置 API 时仅为占位。
+   */
+  const handleGenerateVideo = async () => {
+    if (videoGenerating) return;
+    setVideoGenerating(true);
+    const payload = {
+      speakContent: speakContent.trim(),
+      actionDesc: actionDesc.trim(),
+      resolution: outputQuality,
+      format: outputFormat,
+      codec: outputCodec,
+    };
+    try {
+      const raw = localStorage.getItem('jiangying_api_config');
+      const config = raw ? JSON.parse(raw) : null;
+      const base = (config?.digitalHuman?.baseUrl || config?.baseUrl || '').toString().replace(/\/$/, '');
+      const path = (config?.digitalHuman?.endpoint || '/v1/digital-human').replace(/^\//, '');
+      if (base) {
+        const res = await fetch(`${base}/${path}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(config?.apiKey && { Authorization: `Bearer ${config.apiKey}` }),
+          },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const videoUrl = data.videoUrl ?? data.data?.videoUrl;
+          if (videoUrl) {
+            // TODO: 将 videoUrl 写入预览区或结果列表
+          }
+        }
+      }
+    } catch (_) {}
+    setVideoGenerating(false);
+  };
+
+  return (
+    <div className="mx-auto max-w-4xl px-4 py-8">
+      {/* 标题 */}
+      <div className="mb-6 text-center">
+        <h1 className="text-2xl font-bold text-white md:text-3xl">
+          开启你的
+          <span className="text-cyan-400"> 数字人</span>
+          、即刻造梦!
+        </h1>
+      </div>
+
+      {/* 模式切换：单图视频生成 | 推流直播 */}
+      <div className="mb-6 flex justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => setMode(MODE_VIDEO)}
+          className={`rounded-full px-5 py-2.5 text-sm font-medium transition ${
+            mode === MODE_VIDEO
+              ? 'bg-cyan-500/20 text-cyan-300'
+              : 'bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1]'
+          }`}
+        >
+          单图视频生成
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode(MODE_LIVE)}
+          className={`rounded-full px-5 py-2.5 text-sm font-medium transition ${
+            mode === MODE_LIVE
+              ? 'bg-cyan-500/20 text-cyan-300'
+              : 'bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1]'
+          }`}
+        >
+          推流直播
+        </button>
+      </div>
+
+      {/* 主卡片：左侧 角色/音色 + 中间 内容区（按模式切换） */}
+      <Card className="overflow-hidden p-0">
+        <div className="flex flex-col md:flex-row">
+          {/* 左侧：角色、音色 */}
+          <div className="flex shrink-0 flex-row justify-center gap-4 border-b border-white/[0.08] p-6 md:flex-col md:border-b-0 md:border-r">
+            <input
+              ref={characterInputRef}
+              type="file"
+              accept={ACCEPT_IMAGES}
+              className="hidden"
+              onChange={handleCharacterChange}
+            />
+            <button
+              type="button"
+              onClick={() => characterInputRef.current?.click()}
+              className="flex h-28 w-28 flex-shrink-0 flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/20 bg-white/[0.04] transition hover:border-cyan-400/50 hover:bg-white/[0.06] -rotate-2"
+            >
+              {characterPreviewUrl ? (
+                <img
+                  src={characterPreviewUrl}
+                  alt="角色"
+                  className="h-full w-full rounded-lg object-cover"
+                />
+              ) : (
+                <>
+                  <span className="text-3xl text-zinc-400">+</span>
+                  <span className="mt-1 text-xs text-zinc-500">角色</span>
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              className="flex h-28 w-28 flex-shrink-0 flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/20 bg-white/[0.04] transition hover:border-cyan-400/50 hover:bg-white/[0.06] rotate-1"
+            >
+              <span className="text-2xl text-zinc-400">〰️</span>
+              <span className="mt-1 text-xs text-zinc-500">音色</span>
+            </button>
+          </div>
+
+          {/* 中间：按模式显示 */}
+          <div className="flex-1 p-6">
+            {mode === MODE_VIDEO && (
+              <>
+                <label className="mb-2 block text-sm font-medium text-zinc-300">说话内容</label>
+                <Input
+                  type="textarea"
+                  rows={4}
+                  placeholder="请输入你希望角色说出的内容"
+                  value={speakContent}
+                  onChange={setSpeakContent}
+                  className="mb-4 resize-none"
+                />
+                <label className="mb-2 block text-sm font-medium text-zinc-300">
+                  动作描述 <span className="text-zinc-500">(可选)</span>
+                </label>
+                <Input
+                  type="textarea"
+                  rows={3}
+                  placeholder="添加动作描述和镜头语言，如：镜头推进，他摘下眼镜，对着镜头笑着说"
+                  value={actionDesc}
+                  onChange={setActionDesc}
+                  className="resize-none"
+                />
+              </>
+            )}
+
+            {mode === MODE_LIVE && (
+              <div className="space-y-4">
+                <p className="text-sm text-zinc-400">
+                  配置推流地址后，数字人将直接推流到直播平台（如抖音、快手、OBS 等）。
+                </p>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-zinc-300">推流地址 (RTMP)</label>
+                  <Input
+                    placeholder="rtmp://xxx/live/..."
+                    value={streamUrl}
+                    onChange={setStreamUrl}
+                    className="font-mono text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+                    推流密钥 <span className="text-zinc-500">(可选)</span>
+                  </label>
+                  <Input
+                    placeholder="部分平台将地址与密钥分开填写"
+                    value={streamKey}
+                    onChange={setStreamKey}
+                    className="font-mono text-sm"
+                  />
+                </div>
+                <label className="mb-2 block text-sm font-medium text-zinc-300">直播时说话内容</label>
+                <Input
+                  type="textarea"
+                  rows={3}
+                  placeholder="推流过程中可随时更新，或由 TTS 实时合成"
+                  value={speakContent}
+                  onChange={setSpeakContent}
+                  className="resize-none"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 底部操作栏：按模式切换 */}
+        <div className="flex flex-wrap items-center gap-3 border-t border-white/[0.08] bg-white/[0.02] px-6 py-4">
+          {mode === MODE_VIDEO && (
+            <>
+              <button
+                type="button"
+                className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-3 py-2 text-sm text-cyan-400 hover:bg-white/[0.1]"
+              >
+                <span className="text-zinc-500">👄</span>
+                数字人
+                <span className="text-zinc-500">▾</span>
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[0.1]"
+              >
+                <span className="text-zinc-500">◇</span>
+                快速模式
+              </button>
+              <input
+                ref={audioInputRef}
+                type="file"
+                accept={ACCEPT_AUDIO}
+                className="hidden"
+                onChange={handleAudioChange}
+              />
+              <button
+                type="button"
+                onClick={() => audioInputRef.current?.click()}
+                className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[0.1]"
+              >
+                <span className="text-zinc-500">↑</span>
+                上传音频
+                {audioFile && <span className="text-xs text-cyan-400">({audioFile.name})</span>}
+              </button>
+              <div className="h-6 w-px bg-white/10" />
+              {/* 输出画质 */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setOutputQualityOpen((v) => !v); setOutputFormatOpen(false); setOutputCodecOpen(false); }}
+                  className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[0.1]"
+                >
+                  {OUTPUT_QUALITIES.find((q) => q.value === outputQuality)?.label ?? '2K'}
+                  <span className={`inline-block transition-transform ${outputQualityOpen ? 'rotate-180' : ''}`}>▾</span>
+                </button>
+                {outputQualityOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setOutputQualityOpen(false)} aria-hidden />
+                    <div className="absolute left-0 top-full z-20 mt-1 min-w-[90px] rounded-lg border border-white/10 bg-zinc-900 py-1 shadow-xl">
+                      {OUTPUT_QUALITIES.map((q) => (
+                        <button key={q.value} type="button" onClick={() => { setOutputQuality(q.value); setOutputQualityOpen(false); }}
+                          className={`block w-full px-3 py-2 text-left text-sm ${outputQuality === q.value ? 'text-cyan-400' : 'text-zinc-300 hover:bg-white/[0.06]'}`}
+                        >{q.label}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setOutputFormatOpen((v) => !v); setOutputQualityOpen(false); setOutputCodecOpen(false); }}
+                  className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[0.1]"
+                >
+                  {OUTPUT_FORMATS.find((f) => f.value === outputFormat)?.label ?? 'MP4'}
+                  <span className={`inline-block transition-transform ${outputFormatOpen ? 'rotate-180' : ''}`}>▾</span>
+                </button>
+                {outputFormatOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setOutputFormatOpen(false)} aria-hidden />
+                    <div className="absolute left-0 top-full z-20 mt-1 min-w-[90px] rounded-lg border border-white/10 bg-zinc-900 py-1 shadow-xl">
+                      {OUTPUT_FORMATS.map((f) => (
+                        <button key={f.value} type="button" onClick={() => { setOutputFormat(f.value); setOutputFormatOpen(false); }}
+                          className={`block w-full px-3 py-2 text-left text-sm ${outputFormat === f.value ? 'text-cyan-400' : 'text-zinc-300 hover:bg-white/[0.06]'}`}
+                        >{f.label}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setOutputCodecOpen((v) => !v); setOutputQualityOpen(false); setOutputFormatOpen(false); }}
+                  className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[0.1]"
+                  title="视频编码格式"
+                >
+                  {OUTPUT_CODECS.find((c) => c.value === outputCodec)?.label ?? 'H.264'}
+                  <span className={`inline-block transition-transform ${outputCodecOpen ? 'rotate-180' : ''}`}>▾</span>
+                </button>
+                {outputCodecOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setOutputCodecOpen(false)} aria-hidden />
+                    <div className="absolute left-0 top-full z-20 mt-1 min-w-[120px] rounded-lg border border-white/10 bg-zinc-900 py-1 shadow-xl">
+                      <p className="px-3 py-1.5 text-xs text-zinc-500">编码格式</p>
+                      {OUTPUT_CODECS.map((c) => (
+                        <button key={c.value} type="button" onClick={() => { setOutputCodec(c.value); setOutputCodecOpen(false); }}
+                          className={`block w-full px-3 py-2 text-left text-sm ${outputCodec === c.value ? 'text-cyan-400' : 'text-zinc-300 hover:bg-white/[0.06]'}`}
+                        >{c.label}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+
+============================================================
+（中间省略第 1501 ~ 3616 行）
+============================================================
+
+【后30页（第3617行 ~ 第5116行）】
+
+                <button
+                  type="button"
+                  onClick={() => setExpandedEpisode(expandedEpisode === idx ? null : idx)}
+                  className="flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-white/[0.03]"
+                >
+                  <span className="font-medium text-white">{ep.剧集}</span>
+                  <span className="text-xs text-zinc-500">
+                    {expandedEpisode === idx ? '▾' : '▸'} {ep.分镜.length} 镜
+                  </span>
+                </button>
+                {expandedEpisode === idx && (
+                  <div className="border-t border-white/10 px-4 pb-4 pt-2">
+                    {ep.分镜.map((shot, i) => (
+                      <div
+                        key={i}
+                        className="mb-4 overflow-hidden rounded-lg border border-white/10 bg-zinc-900/50 last:mb-0"
+                      >
+                        <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-3 py-2">
+                          <span className="text-xs font-medium text-amber-400/90">镜 {i + 1}</span>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => passToImage(shot.prompt)}
+                              className="rounded bg-white/10 px-2 py-1 text-xs text-zinc-300 hover:bg-amber-500/20 hover:text-amber-200"
+                            >
+                              文生图
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => passToVideo(shot.prompt)}
+                              className="rounded bg-white/10 px-2 py-1 text-xs text-zinc-300 hover:bg-amber-500/20 hover:text-amber-200"
+                            >
+                              文生视频
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid gap-x-4 gap-y-2 p-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                          {SHOT_FIELDS.map(({ key, placeholder }) => (
+                            <div key={key} className="flex flex-col gap-0.5">
+                              <span className="text-xs text-zinc-500">{key}</span>
+                              <span className="text-zinc-300">
+                                {shot[key] || (
+                                  <span className="italic text-zinc-600">—</span>
+                                )}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap gap-4 border-t border-white/10 px-3 py-3 sm:gap-6">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-xs text-zinc-500">色调</span>
+                            <select
+                              value={shot['色调'] || ''}
+                              onChange={(e) => updateShot(idx, i, { 色调: e.target.value })}
+                              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-200 focus:border-amber-500/50 focus:outline-none"
+                            >
+                              {COLOR_TONES.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-xs text-zinc-500">画面风格</span>
+                            <select
+                              value={shot['画面风格'] || ''}
+                              onChange={(e) => updateShot(idx, i, { 画面风格: e.target.value })}
+                              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-200 focus:border-amber-500/50 focus:outline-none"
+                            >
+                              {VISUAL_STYLES.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <div className="border-t border-white/10 px-3 py-2">
+                          <span className="text-xs text-zinc-500">描述 / 综合 prompt</span>
+                          <p className="mt-0.5 text-xs leading-relaxed text-zinc-400">
+                            {shot.prompt || shot['描述']}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ===== 文件：src/pages/VideoGeneratePage.jsx ===== */
+import React, { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+
+const ACCEPT_IMAGES = 'image/*';
+const ACCEPT_VIDEO = 'video/*';
+const ACCEPT_MEDIA = 'image/*,video/*';
+const API_CONFIG_KEY = 'jiangying_api_config';
+
+/** 视频比例（含 21:9 等），用于下拉与缩略图 */
+const VIDEO_RATIOS = [
+  { value: '21:9', label: '21:9' },
+  { value: '16:9', label: '16:9' },
+  { value: '9:16', label: '9:16' },
+  { value: '1:1', label: '1:1' },
+  { value: '4:3', label: '4:3' },
+  { value: '3:4', label: '3:4' },
+];
+
+/**
+ * 比例缩略图：按比例画小矩形示意
+ * @param {{ ratio: string; className?: string }} props
+ */
+function RatioThumb({ ratio, className = '' }) {
+  const [w, h] = ratio.split(':').map(Number);
+  const isPortrait = h > w;
+  const style = isPortrait
+    ? { width: (24 * w) / h, height: 24 }
+    : { width: 24, height: (24 * h) / w };
+  return (
+    <span
+      className={`inline-block shrink-0 rounded border border-white/30 bg-white/10 ${className}`}
+      style={style}
+      aria-hidden
+    />
+  );
+}
+
+/** 时长选项：5 秒到 15 秒 */
+const DURATIONS = Array.from({ length: 11 }, (_, i) => {
+  const sec = i + 5;
+  return { value: sec, label: `${sec}s` };
+});
+
+/** 视频画质：高清 / 2K / 4K */
+const VIDEO_QUALITIES = [
+  { value: 'hd', label: '高清' },
+  { value: '2k', label: '2K' },
+  { value: '4k', label: '4K' },
+];
+
+/** 视频封装格式 */
+const VIDEO_FORMATS = [
+  { value: 'mov', label: 'MOV' },
+  { value: 'mp4', label: 'MP4' },
+];
+
+/** 视频编码格式（与封装格式配合：MP4/MOV + H.264 或 H.265） */
+const VIDEO_CODECS = [
+  { value: 'h264', label: 'H.264' },
+  { value: 'h265', label: 'H.265' },
+];
+
+/** 首尾帧下拉模式：全能参考、首尾帧、智能多帧、主体参考 */
+const FRAME_MODES = [
+  { value: 'omni', label: '全能参考', icon: '⊗', isNew: true },
+  { value: 'firstLast', label: '首尾帧', icon: '▭' },
+  { value: 'multi', label: '智能多帧', icon: '{ }' },
+  { value: 'subject', label: '主体参考', icon: '▢' },
+];
+
+/**
+ * 单个首帧/尾帧上传槽位：支持拖拽、点击上传、预览
+ * @param {{ label: string; file: File | null; onFile: (f: File | null) => void; accept?: string }} props
+ */
+function FrameSlot({ label, file, onFile, accept = ACCEPT_IMAGES }) {
+  const inputRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl('');
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const addFile = (fileList) => {
+    const first = Array.from(fileList || []).find((f) => f.type.startsWith('image/'));
+    if (first) onFile(first);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    addFile(e.dataTransfer.files);
+  };
+
+  return (
+    <div className="flex flex-col items-center">
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        className="hidden"
+        onChange={(e) => {
+          addFile(e.target.files);
+          e.target.value = '';
+        }}
+      />
+      <div
+        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+        onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+        onDrop={handleDrop}
+        onClick={() => inputRef.current?.click()}
+        className={`flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed transition-colors ${
+          isDragging ? 'border-emerald-500 bg-emerald-500/10' : 'border-white/[0.15] bg-white/[0.04] hover:border-white/[0.25] hover:bg-white/[0.06]'
+        }`}
+      >
+        {previewUrl ? (
+          <>
+            <img src={previewUrl} alt={label} className="max-h-full max-w-full object-contain rounded-lg" />
+            <p className="mt-1 text-xs text-zinc-400 truncate max-w-full px-1">{file?.name}</p>
+          </>
+        ) : (
+          <>
+            <span className="text-4xl text-zinc-500">+</span>
+            <p className="mt-1 text-sm text-zinc-400">拖拽或点击上传</p>
+          </>
+        )}
+      </div>
+      <p className="mt-2 text-sm font-medium text-zinc-300">{label}</p>
+      {file && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onFile(null); }}
+          className="mt-1 text-xs text-zinc-500 hover:text-red-400"
+        >
+          移除
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 全能参考单项：显示图片/视频缩略图、文件名、移除按钮，并管理 Object URL 释放
+ * @param {{ file: File; onRemove: () => void }} props
+ */
+function OmniRefThumbnail({ file, onRemove }) {
+  const [url, setUrl] = useState('');
+  const isImage = file.type.startsWith('image/');
+  const isVideo = file.type.startsWith('video/');
+
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+
+  return (
+    <div className="group relative flex shrink-0 flex-col items-center rounded-lg border border-white/10 bg-white/[0.04] overflow-hidden">
+      <div className="relative h-20 w-20 flex items-center justify-center bg-zinc-800/80">
+        {isImage && url ? (
+          <img src={url} alt="" className="h-full w-full object-cover" />
+        ) : isVideo && url ? (
+          <video src={url} muted className="h-full w-full object-cover" preload="metadata" />
+        ) : (
+          <span className="text-2xl text-zinc-500">?</span>
+        )}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition group-hover:opacity-100 hover:bg-red-500"
+          title="移除"
+        >
+          ×
+        </button>
+      </div>
+      <p className="w-20 truncate px-1 py-1 text-center text-xs text-zinc-400" title={file.name}>{file.name}</p>
+    </div>
+  );
+}
+
+/** 将 prompt 按 @图片N / @视频N 拆成段落，便于渲染带缩略图的芯片 */
+function parsePromptToSegments(prompt, atOptions) {
+  if (!prompt || !atOptions?.length) return prompt ? [{ type: 'text', value: prompt }] : [];
+  const re = /@(图片\d+|视频\d+)/g;
+  const segments = [];
+  let lastEnd = 0;
+  let m;
+  while ((m = re.exec(prompt)) !== null) {
+    if (m.index > lastEnd) segments.push({ type: 'text', value: prompt.slice(lastEnd, m.index) });
+    const refIndex = atOptions.findIndex((o) => o.label === m[1]);
+    if (refIndex >= 0) segments.push({ type: 'ref', refIndex });
+    else segments.push({ type: 'text', value: m[0] });
+    lastEnd = m.index + m[0].length;
+  }
+  if (lastEnd < prompt.length) segments.push({ type: 'text', value: prompt.slice(lastEnd) });
+  return segments.length ? segments : [{ type: 'text', value: prompt }];
+}
+
+/** 将段落序列化回 prompt 字符串 */
+function serializeSegments(segments, atOptions) {
+  if (!atOptions?.length) return segments.map((s) => (s.type === 'text' ? s.value : '')).join('');
+  return segments
+    .map((s) => (s.type === 'text' ? s.value : '@' + atOptions[s.refIndex].label))
+    .join('');
+}
+
+/**
+ * 内联引用芯片：@图片1 / @视频1 后带缩略图，用于 contenteditable 内
+ * @param {{ file: File; label: string }} props
+ */
+function InlineRefChip({ file, label }) {
+  const [url, setUrl] = useState('');
+  const isImage = file?.type?.startsWith('image/');
+  useEffect(() => {
+    if (!file) return;
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  return (
+    <span
+      contentEditable={false}
+      data-ref-label={label}
+      className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/10 px-1.5 py-0.5 align-middle"
+    >
+      {url && isImage ? (
+        <img src={url} alt="" className="h-5 w-5 shrink-0 rounded object-cover" />
+      ) : url ? (
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-600 text-xs">▶</span>
+      ) : null}
+      <span className="text-xs text-zinc-300">{label}</span>
+    </span>
+  );
+}
+
+/**
+ * 视频生成页 - 布局对齐参考图：大文案框 + 首帧/尾帧双槽 + 底部操作栏（比例、时长等）
+ */
+export function VideoGeneratePage() {
+  const location = useLocation();
+  const initialPrompt = (location.state && typeof location.state.prompt === 'string') ? location.state.prompt : '';
+  const [prompt, setPrompt] = useState(initialPrompt);
+  const [startFrame, setStartFrame] = useState(null);
+  const [endFrame, setEndFrame] = useState(null);
+  const [videoRatio, setVideoRatio] = useState('21:9');
+  const [duration, setDuration] = useState(15);
+  const [frameMode, setFrameMode] = useState('firstLast');
+  const [frameMenuOpen, setFrameMenuOpen] = useState(false);
+  const [ratioMenuOpen, setRatioMenuOpen] = useState(false);
+  const [durationMenuOpen, setDurationMenuOpen] = useState(false);
+  const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
+  const [formatMenuOpen, setFormatMenuOpen] = useState(false);
+  const [codecMenuOpen, setCodecMenuOpen] = useState(false);
+  const [videoQuality, setVideoQuality] = useState('2k');
+  const [videoFormat, setVideoFormat] = useState('mp4');
+  const [videoCodec, setVideoCodec] = useState('h264');
+  /** 已生成的视频列表（预览、下载、再次生成/再次编辑） */
+  const [generatedVideos, setGeneratedVideos] = useState([]);
+  const [omniRefs, setOmniRefs] = useState([]);
+  const omniInputRef = useRef(null);
+  /** 智能多帧：每项为 File | null，至少 1 个槽位，最多 8 个 */
+  const [multiFrames, setMultiFrames] = useState([null]);
+  const MULTI_FRAME_MAX = 8;
+
+  const setMultiFrameAt = (index, file) => {
+    setMultiFrames((prev) => {
+      const next = [...prev];
+      next[index] = file;
+      return next;
+    });
+  };
+  const addMultiFrameSlot = () => {
+    setMultiFrames((prev) => (prev.length < MULTI_FRAME_MAX ? [...prev, null] : prev));
+  };
+  const removeMultiFrameSlot = (index) => {
+    setMultiFrames((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      return next.length ? next : [null];
+    });
+  };
+
+  const addOmniRefs = (files) => {
+    const list = Array.from(files || []).filter((f) => f.type.startsWith('image/') || f.type.startsWith('video/'));
+    setOmniRefs((prev) => [...prev, ...list].slice(0, 5));
+  };
+  const removeOmniRef = (index) => setOmniRefs((prev) => prev.filter((_, i) => i !== index));
+
+  /**
+   * 构建视频生成请求参数。
+   * prompt 仅写入 AI 能理解的视觉设置（比例、时长、模式）；
+   * 画质/格式/编码等后处理参数通过 payload 结构化字段传给后端
+   */
+  const buildVideoGeneratePayload = () => {
+    const user = (prompt || '').trim();
+    const modeLabel = FRAME_MODES.find((m) => m.value === frameMode)?.label || frameMode;
+    const settings = [`比例 ${videoRatio}`, `时长 ${duration}s`, `模式 ${modeLabel}`];
+    const fullPrompt = user
+      ? `${user}\n[设置] ${settings.join(' | ')}`
+      : `[设置] ${settings.join(' | ')}`;
+    return {
+      prompt: fullPrompt,
+      duration,
+      aspectRatio: videoRatio,
+      resolution: videoQuality,
+      format: videoFormat,
+      codec: videoCodec,
+      frameMode,
+    };
+  };
+
+  /** @ 关联菜单：仅在全能参考且有已选参考时可用 */
+  const [atMenuOpen, setAtMenuOpen] = useState(false);
+  const atIndexRef = useRef(0);
+  const atAnchorRef = useRef(0);
+  const promptInputRef = useRef(null);
+  const atMenuRef = useRef(null);
+  const pendingCursorRef = useRef(null);
+
+  /** 根据 omniRefs 生成可插入的 @选项：图片1、视频2 等 */
+  const atOptions = React.useMemo(() => {
+    return omniRefs.map((file, i) => {
+      const n = i + 1;
+      const label = file.type.startsWith('image/') ? `图片${n}` : `视频${n}`;
+      return { label, insert: label };
+    });
+  }, [omniRefs]);
+
+  /** 检测光标前是否为「刚输入的 @」，是则打开 @ 关联菜单并记录插入位置 */
+  const tryOpenAtMenu = (value, cursorStart) => {
+    if (frameMode !== 'omni' || omniRefs.length === 0) return false;
+    const start = cursorStart ?? value.length;
+    const before = value.slice(0, start);
+    const atIdx = before.lastIndexOf('@');
+    if (atIdx === -1) return false;
+    if (!/^@\s*$/.test(before.slice(atIdx))) return false;
+    atIndexRef.current = atIdx;
+    atAnchorRef.current = start;
+    setAtMenuOpen(true);
+    return true;
+  };
+
+  /** 纯文本输入框变更：读 value 与 selectionStart，支持 @ 关联 */
+  const handlePromptChange = (e) => {
+    const el = e.target;
+    const v = el.value;
+    const start = el.selectionStart ?? v.length;
+    setPrompt(v);
+    if (!tryOpenAtMenu(v, start)) setAtMenuOpen(false);
+  };
+
+  const insertAtRef = (insert) => {
+    const at = atIndexRef.current;
+    const anchor = atAnchorRef.current;
+    const newText = prompt.slice(0, at) + '@' + insert + prompt.slice(anchor);
+    setPrompt(newText);
+    setAtMenuOpen(false);
+    pendingCursorRef.current = at + insert.length + 1;
+  };
+
+  /** 是否使用富文本输入（全能参考且有参考时，@ 后显示缩略图） */
+  const useRichPrompt = frameMode === 'omni' && omniRefs.length > 0;
+  const editableRef = useRef(null);
+  /** 从 contenteditable DOM 序列化出 prompt 并返回当前光标字符偏移 */
+  const serializeEditableAndGetCursor = () => {
+    const el = editableRef.current;
+    if (!el) return { prompt: '', cursor: 0 };
+    const sel = window.getSelection();
+    let prompt = '';
+    let cursor = -1;
+    const walk = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const start = prompt.length;
+        prompt += node.textContent || '';
+        if (sel && node === sel.anchorNode) cursor = start + (sel.anchorOffset || 0);
+        return;
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const el = node;
+      if (el.getAttribute?.('data-ref-label')) {
+        const label = el.getAttribute('data-ref-label');
+        const start = prompt.length;
+        prompt += '@' + label;
+        if (sel && (el.contains(sel.anchorNode) || el === sel.anchorNode)) cursor = start + 1 + label.length;
+        return;
+      }
+      for (let i = 0; i < el.childNodes.length; i++) walk(el.childNodes[i]);
+    };
+    for (let i = 0; i < el.childNodes.length; i++) walk(el.childNodes[i]);
+    if (cursor < 0) cursor = prompt.length;
+    return { prompt, cursor };
+  };
+  /** 将 contenteditable 光标设到指定字符位置 */
+  const setEditableCursor = (offset) => {
+    const el = editableRef.current;
+    if (!el) return;
+    const sel = window.getSelection();
+    const range = document.createRange();
+    let passed = 0;
+    const find = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const len = (node.textContent || '').length;
+        if (passed + len >= offset) {
+          range.setStart(node, Math.min(offset - passed, len));
+          range.collapse(true);
+          return true;
+        }
+        passed += len;
+        return false;
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return false;
+      const elem = node;
+      if (elem.getAttribute?.('data-ref-label')) {
+        const label = elem.getAttribute('data-ref-label');
+        const len = 1 + label.length;
+        if (passed + len >= offset) {
+          range.setStartAfter(elem);
+          range.collapse(true);
+          return true;
+        }
+        passed += len;
+        return false;
+      }
+      for (let i = 0; i < elem.childNodes.length; i++) if (find(elem.childNodes[i])) return true;
+      return false;
+    };
+    find(el);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  };
+
+  const handleRichInput = () => {
+    const { prompt: nextPrompt, cursor } = serializeEditableAndGetCursor();
+    setPrompt(nextPrompt);
+    if (!tryOpenAtMenu(nextPrompt, cursor)) setAtMenuOpen(false);
+    pendingCursorRef.current = cursor;
+  };
+  const handleRichPaste = (e) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    document.execCommand('insertText', false, text);
+    setTimeout(handleRichInput, 0);
+  };
+
+  /** 插入 @ 选项后恢复光标位置（textarea 或 contenteditable） */
+  useEffect(() => {
+    if (pendingCursorRef.current == null) return;
+    const pos = pendingCursorRef.current;
+    pendingCursorRef.current = null;
+    if (useRichPrompt && editableRef.current) {
+      editableRef.current.focus();
+      setEditableCursor(pos);
+    } else if (promptInputRef.current) {
+      promptInputRef.current.focus();
+      promptInputRef.current.setSelectionRange(pos, pos);
+    }
+  }, [prompt, useRichPrompt]);
+
+  /** 兜底：prompt 变化后若末尾是 @（含空格），且未打开菜单，则用当前内容再尝试打开（解决 IME/受控下 selectionStart 不准） */
+  useEffect(() => {
+    if (atMenuOpen || !prompt || frameMode !== 'omni' || omniRefs.length === 0) return;
+    const trimmed = prompt.trimEnd();
+    if (!trimmed.endsWith('@')) return;
+    const atIdx = trimmed.lastIndexOf('@');
+    atIndexRef.current = atIdx;
+    atAnchorRef.current = prompt.length;
+    setAtMenuOpen(true);
+  }, [prompt, frameMode, omniRefs.length, atMenuOpen]);
+
+  /** 点击菜单和输入框外时关闭 @ 菜单，不遮挡输入框，保证可继续输入 */
+  useEffect(() => {
+    if (!atMenuOpen) return;
+    const handleClickOutside = (e) => {
+      const inMenu = atMenuRef.current?.contains(e.target);
+      const inInput = promptInputRef.current?.contains(e.target);
+      if (!inMenu && !inInput) setAtMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [atMenuOpen]);
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-8">
+      <h1 className="mb-2 text-2xl font-bold text-white">视频生成</h1>
+      <p className="mb-6 text-zinc-400">智能多帧 · 超长镜头轻松生成</p>
+
+      {/* 文案输入：全能参考且有参考时用 contenteditable 显示 @图片N 后带缩略图，否则用 textarea */}
+      <Card className="relative mb-6 overflow-visible p-4">
+        {useRichPrompt ? (
+          <div
+            ref={(r) => {
+              editableRef.current = r;
+              promptInputRef.current = r;
+            }}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={handleRichInput}
+            onPaste={handleRichPaste}
+            data-placeholder="输入文字，描述你想创作的画面内容、运动方式等。输入 @ 可关联已上传的参考，如 @图片1 作为首帧、@视频1 的动作。"
+            className="min-h-[120px] w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.04] px-4 py-3 text-base text-slate-100 focus:border-emerald-500 focus:bg-white/[0.06] focus:outline-none backdrop-blur-xl transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-500"
+          >
+            {(!prompt || !prompt.trim()) ? null : parsePromptToSegments(prompt, atOptions).map((seg, i) =>
+              seg.type === 'text' ? (
+                <span key={i}>{seg.value}</span>
+              ) : (
+                <InlineRefChip
+                  key={i}
+                  file={omniRefs[seg.refIndex]}
+                  label={atOptions[seg.refIndex].label}
+                />
+              )
+            )}
+          </div>
+        ) : (
+          <textarea
+            ref={promptInputRef}
+            rows={4}
+            placeholder="输入文字，描述你想创作的画面内容、运动方式等。全能参考时输入 @ 可关联已上传的参考图/视频，如 @图片1 作为首帧、@视频1 的动作。"
+            value={prompt ?? ''}
+            onChange={handlePromptChange}
+            className="w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.04] px-4 py-3 text-base text-slate-100 placeholder:text-zinc-500 focus:border-emerald-500 focus:bg-white/[0.06] focus:outline-none backdrop-blur-xl transition-colors"
+          />
+        )}
+        {atMenuOpen && atOptions.length > 0 && (
+          <div
+            ref={atMenuRef}
+            className="absolute left-4 right-4 bottom-full z-20 mb-1 rounded-xl border border-emerald-500/30 bg-zinc-900 py-1 shadow-xl ring-1 ring-black/20"
+            role="listbox"
+            aria-label="选择要关联的参考"
+          >
+              <p className="px-3 py-1.5 text-xs text-zinc-500">选择要关联的参考（作为角色/首尾帧/动作等）</p>
+              {atOptions.map((opt) => (
+                <button
+                  key={opt.insert}
+                  type="button"
+                  role="option"
+                  onClick={() => insertAtRef(opt.insert)}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-zinc-200 hover:bg-white/[0.08] hover:text-white"
+                >
+                  <span className="text-emerald-400">@</span>
+                  {opt.label}
+                </button>
+              ))}
+          </div>
+        )}
+      </Card>
+
+      {/* 全能参考：参考内容上传 + 说明文案（与参考图一致） */}
+      {frameMode === 'omni' ? (
+        <Card className="mb-6 overflow-visible p-6">
+          <div className="flex gap-6">
+            <input
+              ref={omniInputRef}
+              type="file"
+              accept={ACCEPT_MEDIA}
+              multiple
+              className="hidden"
+              onChange={(e) => { addOmniRefs(e.target.files); e.target.value = ''; }}
+            />
+            <div className="flex shrink-0 flex-col items-center">
+              <div
+                onClick={() => omniInputRef.current?.click()}
+                className="flex h-36 w-36 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/20 bg-white/[0.06] transition hover:border-white/30 hover:bg-white/[0.08]"
+              >
+                <span className="text-5xl font-light text-white">+</span>
+                <span className="mt-2 text-sm text-zinc-400">参考内容</span>
+              </div>
+              {omniRefs.length > 0 && (
+                <>
+                  <p className="mt-3 text-xs text-zinc-500">{omniRefs.length}/5 已选</p>
+                  <div className="mt-2 flex flex-wrap gap-3">
+                    {omniRefs.map((file, i) => (
+                      <OmniRefThumbnail key={i} file={file} onRemove={() => removeOmniRef(i)} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm leading-relaxed text-zinc-400">
+                上传 1–5 张参考图或视频，可自由组合人物、角色、道具、服装、场景等元素，定义他们之间的精彩互动。
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-500">
+                例如：@图片1 作为首帧，@图片2 作为尾帧，模仿 @视频1 的动作跳舞
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : frameMode === 'multi' ? (
+        /* 智能多帧：第1帧、第2帧… 带预览，右侧提示「请添加智能多帧的镜头」 */
+        <Card className="mb-6 overflow-visible p-6">
+          <div className="flex gap-6">
+            <div className="flex min-w-0 flex-1 flex-col">
+              <div className="flex flex-wrap gap-4">
+                {multiFrames.map((file, i) => (
+                  <div key={i} className="flex w-40 flex-col items-center">
+                    <FrameSlot
+                      label={`第${i + 1}帧`}
+                      file={file}
+                      onFile={(f) => setMultiFrameAt(i, f)}
+                    />
+                    {multiFrames.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeMultiFrameSlot(i)}
+                        className="mt-1 text-xs text-zinc-500 hover:text-red-400"
+                      >
+                        移除本帧
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {multiFrames.length < MULTI_FRAME_MAX && (
+                <button
+                  type="button"
+                  onClick={addMultiFrameSlot}
+                  className="mt-4 flex w-fit items-center gap-2 rounded-lg border border-dashed border-white/20 bg-white/[0.04] px-4 py-2 text-sm text-zinc-400 transition hover:border-white/30 hover:bg-white/[0.06] hover:text-zinc-300"
+                >
+                  <span className="text-lg">+</span>
+                  添加一帧
+                </button>
+              )}
+            </div>
+            <div className="flex shrink-0 flex-col justify-center">
+              <p className="text-sm text-zinc-400">请添加智能多帧的镜头</p>
+            </div>
+          </div>
+        </Card>
+      ) : (
+        /* 首帧 ⇄ 尾帧 双槽 */
+        <Card className="mb-6 p-6">
+          <div className="flex items-stretch gap-4">
+            <div className="flex-1 min-w-0">
+              <FrameSlot label="首帧" file={startFrame} onFile={setStartFrame} />
+            </div>
+            <div className="flex items-center justify-center shrink-0 text-zinc-500" title="首尾帧">
+              <span className="text-2xl">⇄</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <FrameSlot label="尾帧" file={endFrame} onFile={setEndFrame} />
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* 底部操作栏：overflow-visible 让下拉不被裁剪 */}
+      <Card className="relative z-10 mb-6 overflow-visible p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="primary"
+            size="lg"
+            className="btn-glow shrink-0"
+            onClick={async () => {
+              const id = Date.now();
+              const refFiles = frameMode === 'omni'
+                ? omniRefs.slice(0, 2)
+                : [startFrame, endFrame].filter(Boolean);
+              const refThumbnailUrls = refFiles.map((f) => URL.createObjectURL(f));
+              const payload = buildVideoGeneratePayload();
+              let videoUrl = null;
+              let thumbnailUrl = null;
+              try {
+                const raw = localStorage.getItem(API_CONFIG_KEY);
+                const config = raw ? JSON.parse(raw) : null;
+                const base = (config?.video?.baseUrl || config?.baseUrl || '').toString().replace(/\/$/, '');
+                const path = (config?.video?.endpoint || '/v1/video/generate').replace(/^\//, '');
+                if (base) {
+                  const res = await fetch(`${base}/${path}`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(config?.apiKey && { Authorization: `Bearer ${config.apiKey}` }),
+                    },
+                    body: JSON.stringify(payload),
+                  });
+                  if (res.ok) {
+                    const data = await res.json();
+                    videoUrl = data.videoUrl ?? data.data?.videoUrl ?? data.url;
+                    thumbnailUrl = data.thumbnailUrl ?? data.data?.thumbnailUrl;
+                  }
+                }
+              } catch (_) {
+                // 未配置或请求失败时使用占位，下方统一 push 一项
+              }
+              setGeneratedVideos((prev) => [
+                ...prev,
+                {
+                  id,
+                  name: `视频_${prev.length + 1}.${videoFormat === 'mov' ? 'mov' : 'mp4'}`,
+                  thumbnailUrl,
+                  videoUrl,
+                  description: prompt || '暂无描述',
+                  duration,
+                  refThumbnailUrls,
+                  quality: videoQuality,
+                  format: videoFormat,
+                  codec: videoCodec,
+                },
+              ]);
+            }}
+          >
+            <span className="mr-1">▶</span>
+            视频生成
+          </Button>
+          <div className="h-6 w-px bg-white/10" />
+          <button
+            type="button"
+            className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[0.1]"
+          >
+            <span className="text-zinc-500">◇</span>
+            Seedance 2.0
+          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setFrameMenuOpen((v) => !v)}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm ${
+                frameMenuOpen ? 'bg-white/[0.1] text-white' : 'bg-white/[0.06] text-zinc-300 hover:bg-white/[0.1]'
+              }`}
+            >
+              <span className="text-zinc-500">▭</span>
+              {FRAME_MODES.find((m) => m.value === frameMode)?.label ?? '首尾帧'}
+              <span className={`inline-block transition-transform ${frameMenuOpen ? 'rotate-180' : ''}`}>▾</span>
+            </button>
+            {frameMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setFrameMenuOpen(false)} aria-hidden />
+                <div className="absolute left-0 top-full z-20 mt-1 min-w-[160px] rounded-xl border border-white/10 bg-zinc-900 py-1 shadow-xl">
+                  {FRAME_MODES.map((m) => (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => {
+                        setFrameMode(m.value);
+                        setFrameMenuOpen(false);
+                      }}
+                      className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm ${
+                        frameMode === m.value ? 'bg-white/[0.08] text-white' : 'text-zinc-300 hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      <span className="text-zinc-500">{m.icon}</span>
+                      <span className="flex-1">{m.label}</span>
+                      {m.isNew && (
+                        <span className="text-xs text-zinc-500">New</span>
+                      )}
+                      {frameMode === m.value && (
+                        <span className="text-emerald-400">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <div className="h-6 w-px bg-white/10" />
+          {/* 比例下拉 */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => { setRatioMenuOpen((v) => !v); setDurationMenuOpen(false); }}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm ${
+                ratioMenuOpen ? 'bg-white/[0.1] text-white' : 'bg-white/[0.06] text-zinc-300 hover:bg-white/[0.1]'
+              }`}
+            >
+              <RatioThumb ratio={videoRatio} className="border-white/40" />
+              {VIDEO_RATIOS.find((r) => r.value === videoRatio)?.label ?? '21:9'}
+              <span className={`inline-block transition-transform ${ratioMenuOpen ? 'rotate-180' : ''}`}>▾</span>
+            </button>
+            {ratioMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setRatioMenuOpen(false)} aria-hidden />
+                <div className="absolute left-0 top-full z-20 mt-1 min-w-[160px] rounded-xl border border-white/10 bg-zinc-900 py-1 shadow-xl">
+                  <p className="px-3 py-2 text-xs text-zinc-500">选择比例</p>
+                  {VIDEO_RATIOS.map((r) => (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => { setVideoRatio(r.value); setRatioMenuOpen(false); }}
+                      className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm ${
+                        videoRatio === r.value ? 'bg-white/[0.08] text-white' : 'text-zinc-300 hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      <RatioThumb ratio={r.value} />
+                      <span>{r.label}</span>
+                      {videoRatio === r.value && <span className="ml-auto text-emerald-400">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          {/* 时长下拉 */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => { setDurationMenuOpen((v) => !v); setRatioMenuOpen(false); }}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm ${
+                durationMenuOpen ? 'bg-white/[0.1] text-white' : 'bg-white/[0.06] text-zinc-300 hover:bg-white/[0.1]'
+              }`}
+            >
+              <span className="text-zinc-500">🕐</span>
+              {DURATIONS.find((d) => d.value === duration)?.label ?? '15s'}
+              <span className={`inline-block transition-transform ${durationMenuOpen ? 'rotate-180' : ''}`}>▾</span>
+            </button>
+            {durationMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setDurationMenuOpen(false)} aria-hidden />
+                <div className="absolute left-0 top-full z-20 mt-1 min-w-[180px] rounded-xl border border-white/10 bg-zinc-900 py-1 shadow-xl">
+                  <p className="px-3 py-2 text-xs text-zinc-500">选择视频生成时长</p>
+                  <div className="max-h-[240px] overflow-y-auto">
+                    {DURATIONS.map((d) => (
+                      <button
+                        key={d.value}
+                        type="button"
+                        onClick={() => { setDuration(d.value); setDurationMenuOpen(false); }}
+                        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                          duration === d.value ? 'bg-white/[0.08] text-white' : 'text-zinc-300 hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        <span className="text-zinc-500">🕐</span>
+                        <span>{d.label}</span>
+                        {duration === d.value && <span className="ml-auto text-emerald-400">✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          {/* 画质：高清 / 2K / 4K */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => { setQualityMenuOpen((v) => !v); setFormatMenuOpen(false); setCodecMenuOpen(false); }}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm ${
+                qualityMenuOpen ? 'bg-white/[0.1] text-white' : 'bg-white/[0.06] text-zinc-300 hover:bg-white/[0.1]'
+              }`}
+            >
+              <span className="text-zinc-500">◇</span>
+              {VIDEO_QUALITIES.find((q) => q.value === videoQuality)?.label ?? '2K'}
+              <span className={`inline-block transition-transform ${qualityMenuOpen ? 'rotate-180' : ''}`}>▾</span>
+            </button>
+            {qualityMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setQualityMenuOpen(false)} aria-hidden />
+                <div className="absolute left-0 top-full z-20 mt-1 min-w-[100px] rounded-xl border border-white/10 bg-zinc-900 py-1 shadow-xl">
+                  {VIDEO_QUALITIES.map((q) => (
+                    <button
+                      key={q.value}
+                      type="button"
+                      onClick={() => { setVideoQuality(q.value); setQualityMenuOpen(false); }}
+                      className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm ${
+                        videoQuality === q.value ? 'bg-white/[0.08] text-white' : 'text-zinc-300 hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      <span>{q.label}</span>
+                      {videoQuality === q.value && <span className="text-emerald-400">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          {/* 格式：MOV / MP4 */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => { setFormatMenuOpen((v) => !v); setQualityMenuOpen(false); setCodecMenuOpen(false); }}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm ${
+                formatMenuOpen ? 'bg-white/[0.1] text-white' : 'bg-white/[0.06] text-zinc-300 hover:bg-white/[0.1]'
+              }`}
+            >
+              {VIDEO_FORMATS.find((f) => f.value === videoFormat)?.label ?? 'MP4'}
+              <span className={`inline-block transition-transform ${formatMenuOpen ? 'rotate-180' : ''}`}>▾</span>
+            </button>
+            {formatMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setFormatMenuOpen(false)} aria-hidden />
+                <div className="absolute left-0 top-full z-20 mt-1 min-w-[100px] rounded-xl border border-white/10 bg-zinc-900 py-1 shadow-xl">
+                  {VIDEO_FORMATS.map((f) => (
+                    <button
+                      key={f.value}
+                      type="button"
+                      onClick={() => { setVideoFormat(f.value); setFormatMenuOpen(false); }}
+                      className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm ${
+                        videoFormat === f.value ? 'bg-white/[0.08] text-white' : 'text-zinc-300 hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      <span>{f.label}</span>
+                      {videoFormat === f.value && <span className="text-emerald-400">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          {/* 编码格式：H.264 / H.265 */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => { setCodecMenuOpen((v) => !v); setQualityMenuOpen(false); setFormatMenuOpen(false); }}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm ${
+                codecMenuOpen ? 'bg-white/[0.1] text-white' : 'bg-white/[0.06] text-zinc-300 hover:bg-white/[0.1]'
+              }`}
+              title="视频编码格式"
+            >
+              <span className="text-zinc-500 text-xs hidden sm:inline">编码</span>
+              {VIDEO_CODECS.find((c) => c.value === videoCodec)?.label ?? 'H.264'}
+              <span className={`inline-block transition-transform ${codecMenuOpen ? 'rotate-180' : ''}`}>▾</span>
+            </button>
+            {codecMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setCodecMenuOpen(false)} aria-hidden />
+                <div className="absolute left-0 top-full z-20 mt-1 min-w-[140px] rounded-xl border border-white/10 bg-zinc-900 py-1 shadow-xl">
+                  <p className="px-3 py-2 text-xs text-zinc-500">编码格式</p>
+                  {VIDEO_CODECS.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => { setVideoCodec(c.value); setCodecMenuOpen(false); }}
+                      className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm ${
+                        videoCodec === c.value ? 'bg-white/[0.08] text-white' : 'text-zinc-300 hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      <span>{c.label}</span>
+                      {videoCodec === c.value && <span className="text-emerald-400">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* 生成结果：视频预览列表，支持下载、再次生成、再次编辑 */}
+      <Card className="relative z-0 mt-6 p-4">
+        <h3 className="mb-4 text-sm font-medium text-zinc-300">生成结果</h3>
+        {generatedVideos.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] py-12 text-center text-sm text-zinc-500">
+            暂无生成视频，点击「视频生成」开始创作
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {generatedVideos.map((item) => (
+              <div
+                key={item.id}
+                className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]"
+              >
+                {/* 顶部：参考图缩略图 + 描述与时长、详细信息 */}
+                <div className="flex gap-3 border-b border-white/10 p-3">
+                  <div className="flex shrink-0">
+                    {(item.refThumbnailUrls || []).slice(0, 2).map((url, i) => (
+                      <div
+                        key={i}
+                        className="-ml-2 first:ml-0 inline-block h-12 w-12 overflow-hidden rounded-lg border border-white/15 bg-zinc-800"
+                        style={{ zIndex: 2 - i }}
+                      >
+                        <img src={url} alt="" className="h-full w-full object-cover" />
+                      </div>
+                    ))}
+                    {(!item.refThumbnailUrls || item.refThumbnailUrls.length === 0) && (
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-white/15 bg-zinc-800 text-zinc-500 text-xs">
+                        参考
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-3 text-xs text-zinc-400">{item.description || '暂无描述'}</p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Seedance 2.0 | {item.duration ?? 15}s | {(item.quality || '2k').toUpperCase()} {item.format?.toUpperCase() || 'MP4'} {item.codec === 'h265' ? 'H.265' : 'H.264'}
+                    </p>
+                  </div>
+                </div>
+                {/* 视频预览区 + 叠加强 controls */}
+                <div className="group relative aspect-video w-full bg-zinc-800/80">
+                  {item.thumbnailUrl ? (
+                    <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                  ) : item.videoUrl ? (
+                    <video src={item.videoUrl} className="h-full w-full object-cover" muted preload="metadata" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-zinc-500">
+                      <span className="text-4xl">▶</span>
+                    </div>
+                  )}
+                  {/* 右上角：下载、更多、收藏 */}
+                  <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                    {item.videoUrl ? (
+                      <a
+                        href={item.videoUrl}
+                        download={item.name || 'video.mp4'}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/50 text-white hover:bg-black/70"
+                        title="下载"
+                      >
+                        ↓
+                      </a>
+                    ) : (
+                      <span
+                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/50 text-zinc-500 cursor-not-allowed"
+                        title="下载"
+                      >
+                        ↓
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/50 text-white hover:bg-black/70"
+                      title="更多"
+                    >
+                      ⋯
+                    </button>
+                    <button
+                      type="button"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/50 text-white hover:bg-black/70"
+                      title="收藏"
+                    >
+                      ☆
+                    </button>
+                  </div>
+                  {/* 底部居中：音量、跳过、HD、音乐 */}
+                  <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-lg bg-black/50 px-2 py-1.5 opacity-0 transition group-hover:opacity-100">
+                    <button type="button" className="p-1 text-white/80 hover:text-white" title="字幕/语音">🗣</button>
+                    <button type="button" className="p-1 text-white/80 hover:text-white" title="音量">〰</button>
+                    <button type="button" className="p-1 text-white/80 hover:text-white" title="跳过">⏭</button>
+                    <span className="px-1 text-xs text-white/70">HD</span>
+                    <button type="button" className="p-1 text-white/80 hover:text-white" title="音乐">♪</button>
+                  </div>
+                </div>
+                {/* 底部操作：重新编辑、再次生成、更多 */}
+                <div className="flex items-center gap-2 p-3">
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5 rounded-lg bg-white/[0.08] px-3 py-2 text-xs text-zinc-300 hover:bg-white/[0.12]"
+                  >
+                    <span>↻</span>
+                    重新编辑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      item.refThumbnailUrls?.forEach((u) => URL.revokeObjectURL(u));
+                      setGeneratedVideos((prev) => prev.filter((v) => v.id !== item.id));
+                    }}
+                    className="flex items-center gap-1.5 rounded-lg bg-white/[0.08] px-3 py-2 text-xs text-zinc-300 hover:bg-white/[0.12]"
+                  >
+                    <span>⟳</span>
+                    再次生成
+                  </button>
+                  <button
+                    type="button"
+                    className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.08] text-zinc-400 hover:bg-white/[0.12]"
+                    title="更多"
+                  >
+                    ⋯
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+/* ===== 文件：src/styles/index.css ===== */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 疆影 AI 复刻 - 全局样式 */
+:root {
+  --color-bg: #0a0a0f;
+  --color-surface: #12121a;
+  --color-surface-hover: #1a1a24;
+  --color-primary: #22c55e;
+  --color-primary-hover: #4ade80;
+  --color-text: #f1f5f9;
+  --color-text-muted: #94a3b8;
+  --color-border: #2d2d3a;
+  --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --radius: 12px;
+  --radius-lg: 16px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ========== 优化：动效与视觉增强（强可见） ========== */
+
+/** 品牌 logo 图：无边框、无背景，避免黑边 */
+img[src*='logo.png'] {
+  border: none !important;
+  background: transparent !important;
+  outline: none;
+}
+
+/** 栏目条内 logo：高度随栏目条等比放大，自豪感加倍 */
+.header-bar {
+  --header-h: 4rem; /* 栏目条高度，改此值则 logo 随动 */
+}
+.header-logo {
+  height: calc(var(--header-h) * 0.85) !important;
+  width: auto !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+.header-logo-text {
+  font-size: calc(var(--header-h) * 0.4);
+}
+
+/** 品牌绿色高亮（黑/白/绿配色） */
+.logo-gradient {
+  color: #22c55e;
+}
+
+/** 区块进入动画 */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  opacity: 0;
+  animation: fade-in-up 0.6s ease-out both;
+}
+
+/** ========== 动态背景：光球漂移 + 呼吸（增强可见） ========== */
+.dynamic-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.dynamic-bg__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  will-change: transform, opacity;
+}
+
+.dynamic-bg__orb--1 {
+  width:  min(100vw, 560px);
+  height: min(100vw, 560px);
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.4) 0%, rgba(34, 197, 94, 0.15) 50%, transparent 70%);
+  left: 5%;
+  top: 10%;
+  animation: bg-float-1 10s ease-in-out infinite;
+}
+
+.dynamic-bg__orb--2 {
+  width:  min(85vw, 440px);
+  height: min(85vw, 440px);
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.35) 0%, rgba(34, 197, 94, 0.12) 50%, transparent 70%);
+  right: 0;
+  top: 35%;
+  animation: bg-float-2 8s ease-in-out infinite;
+}
+
+.dynamic-bg__orb--3 {
+  width:  min(75vw, 400px);
+  height: min(75vw, 400px);
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.3) 0%, rgba(34, 197, 94, 0.1) 50%, transparent 70%);
+  left: 50%;
+  bottom: 10%;
+  transform: translateX(-50%);
+  animation: bg-float-3 12s ease-in-out infinite;
+}
+
+.dynamic-bg__orb--4 {
+  width:  min(65vw, 340px);
+  height: min(65vw, 340px);
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.28) 0%, rgba(34, 197, 94, 0.08) 50%, transparent 70%);
+  left: 25%;
+  top: 45%;
+  animation: bg-pulse 6s ease-in-out infinite;
+}
+
+.dynamic-bg__orb--5 {
+  width:  min(55vw, 300px);
+  height: min(55vw, 300px);
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.32) 0%, rgba(34, 197, 94, 0.1) 50%, transparent 70%);
+  right: 20%;
+  bottom: 25%;
+  animation: bg-float-2 9s ease-in-out infinite reverse;
+}
+
+@keyframes bg-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  33%      { transform: translate(15%, 12%) scale(1.2); opacity: 1; }
+  66%      { transform: translate(-10%, -8%) scale(0.9); opacity: 0.95; }
+}
+
+@keyframes bg-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  50%      { transform: translate(-12%, 15%) scale(1.25); opacity: 1; }
+}
+
+@keyframes bg-float-3 {
+  0%, 100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+  50%      { transform: translate(calc(-50% + 12%), -10%) scale(1.2); opacity: 1; }
+}
+
+@keyframes bg-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50%      { transform: scale(1.35); opacity: 1; }
+}
+
+/** 电路图层：若隐若现，平铺 */
+.dynamic-bg__circuit {
+  position: absolute;
+  inset: 0;
+  background-image: url(/circuit-pattern.svg);
+  background-repeat: repeat;
+  background-size: 400px 400px;
+  opacity: 0.6;
+}
+
+/** 光照层：与光球同位置同动画，mix-blend 使电路被照亮 */
+.dynamic-bg__circuit-lights {
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.dynamic-bg__circuit-light {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform, opacity;
+  /* 中心亮、边缘透明，光球经过时电路变亮 */
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(34, 197, 94, 0.2) 35%,
+    transparent 65%
+  );
+  filter: blur(25px);
+}
+
+.dynamic-bg__circuit-light--1 {
+  width: min(100vw, 560px);
+  height: min(100vw, 560px);
+  left: 5%;
+  top: 10%;
+  animation: bg-float-1 10s ease-in-out infinite;
+}
+
+.dynamic-bg__circuit-light--2 {
+  width: min(85vw, 440px);
+  height: min(85vw, 440px);
+  right: 0;
+  top: 35%;
+  animation: bg-float-2 8s ease-in-out infinite;
+}
+
+.dynamic-bg__circuit-light--3 {
+  width: min(75vw, 400px);
+  height: min(75vw, 400px);
+  left: 50%;
+  bottom: 10%;
+  transform: translateX(-50%);
+  animation: bg-float-3 12s ease-in-out infinite;
+}
+
+.dynamic-bg__circuit-light--4 {
+  width: min(65vw, 340px);
+  height: min(65vw, 340px);
+  left: 25%;
+  top: 45%;
+  animation: bg-pulse 6s ease-in-out infinite;
+}
+
+.dynamic-bg__circuit-light--5 {
+  width: min(55vw, 300px);
+  height: min(55vw, 300px);
+  right: 20%;
+  bottom: 25%;
+  animation: bg-float-2 9s ease-in-out infinite reverse;
+}
+
+/** Hero 区：极淡绿色光（黑/白/绿） */
+.hero-glow {
+  background-color: #0a0a0f;
+  background-image:
+    radial-gradient(ellipse 100% 80% at 50% -30%, rgba(34, 197, 94, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 80% 20%, rgba(34, 197, 94, 0.06) 0%, transparent 40%);
+}
+
+/** 卡片悬停：上浮 + 绿边（毛玻璃搭配） */
+.card-lift {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 20px 40px -12px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+/** 主按钮悬停：绿色光晕 */
+.btn-glow {
+  transition: box-shadow 0.25s ease;
+}
+.btn-glow:hover {
+  box-shadow: 0 0 24px rgba(34, 197, 94, 0.4), 0 0 48px rgba(34, 197, 94, 0.15);
+}
+
+/* ========== 毛玻璃效果（疆影 AI 全局） ========== */
+.glass {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+.glass-hover:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+.glass-strong {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.font-mono-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ========== Developer landing – 语法高亮 ========== */
+.syntax-keyword { color: #c678dd; }
+.syntax-string { color: #98c379; }
+.syntax-function { color: #61afef; }
+.syntax-comment { color: #5c6370; font-style: italic; }
+.syntax-number { color: #d19a66; }
+.syntax-operator { color: #56b6c2; }
+.syntax-property { color: #e06c75; }
+.syntax-builtin { color: #e5c07b; }
+.syntax-regex { color: #e06c75; }
+.code-block {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  tab-size: 4;
+}
+

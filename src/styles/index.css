@@ -1,0 +1,326 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 疆影 AI 复刻 - 全局样式 */
+:root {
+  --color-bg: #0a0a0f;
+  --color-surface: #12121a;
+  --color-surface-hover: #1a1a24;
+  --color-primary: #22c55e;
+  --color-primary-hover: #4ade80;
+  --color-text: #f1f5f9;
+  --color-text-muted: #94a3b8;
+  --color-border: #2d2d3a;
+  --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --radius: 12px;
+  --radius-lg: 16px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ========== 优化：动效与视觉增强（强可见） ========== */
+
+/** 品牌 logo 图：无边框、无背景，避免黑边 */
+img[src*='logo.png'] {
+  border: none !important;
+  background: transparent !important;
+  outline: none;
+}
+
+/** 栏目条内 logo：高度随栏目条等比放大，自豪感加倍 */
+.header-bar {
+  --header-h: 4rem; /* 栏目条高度，改此值则 logo 随动 */
+}
+.header-logo {
+  height: calc(var(--header-h) * 0.85) !important;
+  width: auto !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+.header-logo-text {
+  font-size: calc(var(--header-h) * 0.4);
+}
+
+/** 品牌绿色高亮（黑/白/绿配色） */
+.logo-gradient {
+  color: #22c55e;
+}
+
+/** 区块进入动画 */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  opacity: 0;
+  animation: fade-in-up 0.6s ease-out both;
+}
+
+/** ========== 动态背景：光球漂移 + 呼吸（增强可见） ========== */
+.dynamic-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.dynamic-bg__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  will-change: transform, opacity;
+}
+
+.dynamic-bg__orb--1 {
+  width:  min(100vw, 560px);
+  height: min(100vw, 560px);
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.4) 0%, rgba(34, 197, 94, 0.15) 50%, transparent 70%);
+  left: 5%;
+  top: 10%;
+  animation: bg-float-1 10s ease-in-out infinite;
+}
+
+.dynamic-bg__orb--2 {
+  width:  min(85vw, 440px);
+  height: min(85vw, 440px);
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.35) 0%, rgba(34, 197, 94, 0.12) 50%, transparent 70%);
+  right: 0;
+  top: 35%;
+  animation: bg-float-2 8s ease-in-out infinite;
+}
+
+.dynamic-bg__orb--3 {
+  width:  min(75vw, 400px);
+  height: min(75vw, 400px);
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.3) 0%, rgba(34, 197, 94, 0.1) 50%, transparent 70%);
+  left: 50%;
+  bottom: 10%;
+  transform: translateX(-50%);
+  animation: bg-float-3 12s ease-in-out infinite;
+}
+
+.dynamic-bg__orb--4 {
+  width:  min(65vw, 340px);
+  height: min(65vw, 340px);
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.28) 0%, rgba(34, 197, 94, 0.08) 50%, transparent 70%);
+  left: 25%;
+  top: 45%;
+  animation: bg-pulse 6s ease-in-out infinite;
+}
+
+.dynamic-bg__orb--5 {
+  width:  min(55vw, 300px);
+  height: min(55vw, 300px);
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.32) 0%, rgba(34, 197, 94, 0.1) 50%, transparent 70%);
+  right: 20%;
+  bottom: 25%;
+  animation: bg-float-2 9s ease-in-out infinite reverse;
+}
+
+@keyframes bg-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  33%      { transform: translate(15%, 12%) scale(1.2); opacity: 1; }
+  66%      { transform: translate(-10%, -8%) scale(0.9); opacity: 0.95; }
+}
+
+@keyframes bg-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  50%      { transform: translate(-12%, 15%) scale(1.25); opacity: 1; }
+}
+
+@keyframes bg-float-3 {
+  0%, 100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+  50%      { transform: translate(calc(-50% + 12%), -10%) scale(1.2); opacity: 1; }
+}
+
+@keyframes bg-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50%      { transform: scale(1.35); opacity: 1; }
+}
+
+/** 电路图层：若隐若现，平铺 */
+.dynamic-bg__circuit {
+  position: absolute;
+  inset: 0;
+  background-image: url(/circuit-pattern.svg);
+  background-repeat: repeat;
+  background-size: 400px 400px;
+  opacity: 0.6;
+}
+
+/** 光照层：与光球同位置同动画，mix-blend 使电路被照亮 */
+.dynamic-bg__circuit-lights {
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.dynamic-bg__circuit-light {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform, opacity;
+  /* 中心亮、边缘透明，光球经过时电路变亮 */
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(34, 197, 94, 0.2) 35%,
+    transparent 65%
+  );
+  filter: blur(25px);
+}
+
+.dynamic-bg__circuit-light--1 {
+  width: min(100vw, 560px);
+  height: min(100vw, 560px);
+  left: 5%;
+  top: 10%;
+  animation: bg-float-1 10s ease-in-out infinite;
+}
+
+.dynamic-bg__circuit-light--2 {
+  width: min(85vw, 440px);
+  height: min(85vw, 440px);
+  right: 0;
+  top: 35%;
+  animation: bg-float-2 8s ease-in-out infinite;
+}
+
+.dynamic-bg__circuit-light--3 {
+  width: min(75vw, 400px);
+  height: min(75vw, 400px);
+  left: 50%;
+  bottom: 10%;
+  transform: translateX(-50%);
+  animation: bg-float-3 12s ease-in-out infinite;
+}
+
+.dynamic-bg__circuit-light--4 {
+  width: min(65vw, 340px);
+  height: min(65vw, 340px);
+  left: 25%;
+  top: 45%;
+  animation: bg-pulse 6s ease-in-out infinite;
+}
+
+.dynamic-bg__circuit-light--5 {
+  width: min(55vw, 300px);
+  height: min(55vw, 300px);
+  right: 20%;
+  bottom: 25%;
+  animation: bg-float-2 9s ease-in-out infinite reverse;
+}
+
+/** Hero 区：极淡绿色光（黑/白/绿） */
+.hero-glow {
+  background-color: #0a0a0f;
+  background-image:
+    radial-gradient(ellipse 100% 80% at 50% -30%, rgba(34, 197, 94, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 80% 20%, rgba(34, 197, 94, 0.06) 0%, transparent 40%);
+}
+
+/** 卡片悬停：上浮 + 绿边（毛玻璃搭配） */
+.card-lift {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 20px 40px -12px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+/** 主按钮悬停：绿色光晕 */
+.btn-glow {
+  transition: box-shadow 0.25s ease;
+}
+.btn-glow:hover {
+  box-shadow: 0 0 24px rgba(34, 197, 94, 0.4), 0 0 48px rgba(34, 197, 94, 0.15);
+}
+
+/* ========== 毛玻璃效果（疆影 AI 全局） ========== */
+.glass {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+.glass-hover:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+.glass-strong {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.font-mono-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ========== Developer landing – 语法高亮 ========== */
+.syntax-keyword { color: #c678dd; }
+.syntax-string { color: #98c379; }
+.syntax-function { color: #61afef; }
+.syntax-comment { color: #5c6370; font-style: italic; }
+.syntax-number { color: #d19a66; }
+.syntax-operator { color: #56b6c2; }
+.syntax-property { color: #e06c75; }
+.syntax-builtin { color: #e5c07b; }
+.syntax-regex { color: #e06c75; }
+.code-block {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  tab-size: 4;
+}
